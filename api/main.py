@@ -1,22 +1,14 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import json
 import logging
 from workflows.learning_workflow import LearningWorkflow
+from .cors_config import add_cors_middleware
 
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+add_cors_middleware(app)
 
 class ConnectionManager:
     def __init__(self):
