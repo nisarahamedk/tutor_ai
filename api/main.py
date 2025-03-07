@@ -2,7 +2,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import List
 import json
 import logging
-from workflows.learning_workflow import LearningWorkflow
 from .cors_config import add_cors_middleware
 
 logging.basicConfig(level=logging.INFO)
