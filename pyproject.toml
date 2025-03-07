@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "tutor-ai"
+version = "0.1.0"
+description = "A sophisticated AI-powered tutoring system that provides personalized learning experiences"
+authors = ["OpenHands <openhands@all-hands.dev>"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.109.2"
+uvicorn = "^0.27.1"
+websockets = "^12.0"
+temporalio = "^1.5.0"
+python-multipart = "^0.0.9"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+black = "^24.1.1"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
