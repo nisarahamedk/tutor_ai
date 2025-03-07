@@ -5,14 +5,14 @@ services:
     build: 
       context: .
       target: development
-    command: poetry run uvicorn api.main:app --host 0.0.0.0 --port 53211 --reload
+    command: poetry run uvicorn api.main:app --host 0.0.0.0 --port 52518 --reload --forwarded-allow-ips="*" --proxy-headers
     volumes:
       - .:/app
       - poetry-cache:/root/.cache/pypoetry
     ports:
-      - "53211:53211"
+      - "52518:52518"
     environment:
-      - STATIC_SERVER_URL=http://localhost:55826
+      - STATIC_SERVER_URL=http://localhost:57839
       - TEMPORAL_HOST=temporal:7233
       - ENVIRONMENT=development
     depends_on:
@@ -24,12 +24,12 @@ services:
     build: 
       context: .
       target: development
-    command: poetry run uvicorn api.static_server:app --host 0.0.0.0 --port 55826 --reload
+    command: poetry run uvicorn api.static_server:app --host 0.0.0.0 --port 57839 --reload --forwarded-allow-ips="*" --proxy-headers
     volumes:
       - .:/app
       - poetry-cache:/root/.cache/pypoetry
     ports:
-      - "55826:55826"
+      - "57839:57839"
     environment:
       - ENVIRONMENT=development
     networks:
