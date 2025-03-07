@@ -18,13 +18,14 @@ A sophisticated AI-powered tutoring system that provides personalized learning e
    - Real-time WebSocket communication for chat
    - RESTful endpoints for system interactions
    - CORS and iframe support enabled
-   - Running on port 53211
+   - Running on port 52518
+   - Handles WebSocket connections for chat functionality
 
 2. **Frontend**
    - Simple chat interface
    - Real-time message updates
    - Support for structured responses
-   - Served on port 55826
+   - Served on port 57839
 
 3. **Workflow Orchestration (Temporal.io)**
    - Learning session management
@@ -85,9 +86,10 @@ tutor_ai/
 ### Short-term
 
 1. **Temporal Integration**
-   - [ ] Set up Temporal server
-   - [ ] Implement proper workflow client
+   - [x] Set up Temporal server
+   - [x] Implement proper workflow client
    - [ ] Add error handling and retries
+   - [ ] Configure port forwarding for Temporal UI (8233)
 
 2. **AI Agent Enhancement**
    - [ ] Integrate with actual LLM service
@@ -145,8 +147,9 @@ tutor_ai/
    ./run_servers.sh
    ```
 5. Access the application:
-   - Chat interface: http://localhost:55826
-   - API: http://localhost:53211
+   - Chat interface: http://localhost:57839
+   - API and WebSocket: http://localhost:52518
+   - Temporal UI: http://localhost:8233 (requires port forwarding setup)
 
 ## Development Notes
 
