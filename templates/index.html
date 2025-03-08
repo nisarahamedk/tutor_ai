@@ -42,7 +42,7 @@
     </div>
 
     <script>
-        const ws = new WebSocket('ws://localhost:54427/ws/chat');
+        const ws = new WebSocket(`ws://localhost:{{ ws_port }}/ws/chat`);
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
