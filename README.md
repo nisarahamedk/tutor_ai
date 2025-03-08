@@ -18,14 +18,14 @@ A sophisticated AI-powered tutoring system that provides personalized learning e
    - Real-time WebSocket communication for chat
    - RESTful endpoints for system interactions
    - CORS and iframe support enabled
-   - Running on port 52518
+   - Running on configurable port (default: 54427)
    - Handles WebSocket connections for chat functionality
 
 2. **Frontend**
    - Simple chat interface
    - Real-time message updates
    - Support for structured responses
-   - Served on port 57839
+   - Served on configurable port (default: 55251)
 
 3. **Workflow Orchestration (Temporal.io)**
    - Learning session management
@@ -133,23 +133,32 @@ tutor_ai/
 ## Getting Started
 
 1. Clone the repository
-2. Create and activate virtual environment:
+2. Set up environment configuration:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   cp .env.example .env
+   # Edit .env file to customize ports if needed
    ```
-3. Install dependencies:
+3. Install dependencies using Poetry:
    ```bash
-   pip install fastapi uvicorn websockets temporalio python-multipart
+   poetry install
    ```
 4. Run the servers:
    ```bash
    ./run_servers.sh
    ```
 5. Access the application:
-   - Chat interface: http://localhost:57839
-   - API and WebSocket: http://localhost:52518
+   - Chat interface: http://localhost:{STATIC_PORT} (default: 55251)
+   - API and WebSocket: http://localhost:{API_PORT} (default: 54427)
    - Temporal UI: http://localhost:8233 (requires port forwarding setup)
+
+### Environment Configuration
+
+The application uses environment variables for configuration. These can be set in the `.env` file:
+
+- `API_PORT`: Port for the main API server (default: 54427)
+- `STATIC_PORT`: Port for the static file server (default: 55251)
+
+You can customize these values by editing the `.env` file.
 
 ## Development Notes
 
