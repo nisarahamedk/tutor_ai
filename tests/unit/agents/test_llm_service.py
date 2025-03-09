@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from agents.llm_service import LLMService
 
 @pytest.fixture
@@ -19,44 +19,54 @@ async def test_generate_assessment_questions_basic():
     assert any("Python" in q for q in questions)
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.openai.AsyncOpenAI')
-async def test_generate_assessment_questions_with_openai(mock_openai):
-    """Test question generation with OpenAI integration."""
-    # Mock OpenAI response
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.return_value.choices[0].message.content = """
-    1. What is your current level of programming experience?
-    2. Have you worked with object-oriented languages before?
-    3. What specific Python applications interest you?
-    4. Do you have any experience with development tools like Git?
-    """
-    mock_openai.return_value = mock_client
+@patch('agents.llm_service.LiteLLMModel')
+@patch('agents.llm_service.CodeAgent')
+async def test_generate_assessment_questions_with_litellm(mock_code_agent, mock_litellm):
+    """Test question generation with LiteLLM/Ollama integration."""
+    # Mock LiteLLM and CodeAgent
+    mock_litellm_instance = AsyncMock()
+    mock_litellm.return_value = mock_litellm_instance
     
-    service = LLMService(use_openai=True)
+    mock_agent_instance = AsyncMock()
+    mock_agent_instance.run.return_value = [
+        "What is your current level of programming experience?",
+        "Have you worked with object-oriented languages before?",
+        "What specific Python applications interest you?",
+        "Do you have any experience with development tools like Git?"
+    ]
+    mock_code_agent.return_value = mock_agent_instance
+    
+    service = LLMService(model_name="mistral")
     questions = await service.generate_assessment_questions("I want to learn Python")
     
-    # Verify OpenAI was called with correct parameters
-    mock_client.chat.completions.create.assert_called_once()
-    call_args = mock_client.chat.completions.create.call_args[1]
-    assert call_args["model"] == "gpt-3.5-turbo"
-    assert any("Python" in msg["content"] for msg in call_args["messages"])
-    assert any("assessment questions" in msg["content"] for msg in call_args["messages"])
+    # Verify LiteLLM and CodeAgent were called correctly
+    mock_litellm.assert_called_once_with(
+        model_id="ollama/mistral",
+        temperature=0.7
+    )
+    mock_code_agent.assert_called_once()
+    mock_agent_instance.run.assert_called_once()
     
-    # Verify response processing
+    # Verify response
     assert isinstance(questions, list)
-    assert len(questions) >= 3
-    assert "programming experience" in " ".join(questions)
+    assert len(questions) == 4
+    assert "programming experience" in questions[0]
+    assert all(q.endswith("?") for q in questions)
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.openai.AsyncOpenAI')
-async def test_openai_error_handling(mock_openai):
-    """Test fallback behavior when OpenAI API fails."""
-    # Mock OpenAI to raise an exception
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.side_effect = Exception("API Error")
-    mock_openai.return_value = mock_client
+@patch('agents.llm_service.LiteLLMModel')
+@patch('agents.llm_service.CodeAgent')
+async def test_litellm_error_handling(mock_code_agent, mock_litellm):
+    """Test fallback behavior when LiteLLM/Ollama API fails."""
+    # Mock LiteLLM and CodeAgent to raise an exception
+    mock_litellm_instance = AsyncMock()
+    mock_litellm.return_value = mock_litellm_instance
     
-    service = LLMService(use_openai=True)
+    mock_agent_instance = AsyncMock()
+    mock_agent_instance.run.side_effect = Exception("API Error")
+    mock_code_agent.return_value = mock_agent_instance
+    
+    service = LLMService()
     questions = await service.generate_assessment_questions("I want to learn Python")
     
     # Should fall back to template-based questions

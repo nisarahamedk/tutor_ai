@@ -224,9 +224,9 @@ When contributing to this project:
 
 ### Immediate Next Steps
 1. **LLM Integration (In Progress)**
-   - Complete the LLMService implementation using smolagents and Ollama
-   - Update the PreAssessmentAgent to use the enhanced LLM capabilities
-   - Add tests for LLM-specific functionality
+   - Fix CodeAgent prompt templates to match smolagents format
+   - Update tests to handle the new prompt template structure
+   - Test the integration with Ollama
    - Key files to work on:
      - `/agents/llm_service.py`
      - `/tests/unit/agents/test_llm_service.py`
