@@ -203,12 +203,54 @@ When contributing to this project:
 4. Ensure all endpoints have proper error handling
 5. Test WebSocket connections thoroughly
 
-## Next Steps
+## Development Status (Last Updated: March 9, 2024)
 
-The immediate focus will be on:
-1. Integrating with a proper LLM service
-2. Setting up Temporal workflows
-3. Improving the chat interface
-4. Adding user session management
+### Current State
+1. Basic infrastructure is set up:
+   - FastAPI backend with WebSocket support
+   - Simple frontend chat interface
+   - Initial test suite for API integration tests
+   - LLMService class ready for integration
+
+2. Testing Infrastructure:
+   - Integration tests for API layer and WebSocket communication
+   - Unit tests for PreAssessmentAgent
+   - Test coverage for error handling and edge cases
+
+3. Dependencies:
+   - Added smolagents (v1.10.0) for LLM integration
+   - Ollama installed locally with mistral model
+   - All required Python packages in pyproject.toml
+
+### Immediate Next Steps
+1. **LLM Integration (In Progress)**
+   - Complete the LLMService implementation using smolagents and Ollama
+   - Update the PreAssessmentAgent to use the enhanced LLM capabilities
+   - Add tests for LLM-specific functionality
+   - Key files to work on:
+     - `/agents/llm_service.py`
+     - `/tests/unit/agents/test_llm_service.py`
+
+2. Future Work:
+   - Set up Temporal workflows
+   - Improve the chat interface
+   - Add user session management
+
+### How to Continue Development
+1. The LLMService class is ready for Ollama integration:
+   ```python
+   from smolagents import Agent, Message, Role
+   from smolagents.llms import Ollama
+   ```
+
+2. Key components to implement:
+   - Enhanced question generation using LLM
+   - Dynamic context handling
+   - Improved error handling and fallback mechanisms
+
+3. Testing Strategy:
+   - Run tests: `poetry run pytest tests/ -v`
+   - Ensure all existing tests pass before adding new features
+   - Follow TDD approach for new functionality
 
 This README will be updated as the project evolves.
