@@ -2,21 +2,21 @@ from typing import List, Optional, Dict
 import logging
 import os
 from smolagents import CodeAgent
-from smolagents.llms import Ollama
+from smolagents import LiteLLMModel
 
 class LLMService:
     """Service for interacting with Language Learning Models using smolagents."""
     
     def __init__(self, model_name: str = "mistral"):
         self.logger = logging.getLogger(__name__)
-        self.llm = Ollama(
-            model=model_name,
-            temperature=0.7  # Add some creativity for question generation
+        self.llm = LiteLLMModel(
+            
+             model_id=model_name, api_base="http://localhost:11434", api_key="YOUR_API_KEY", num_ctx=8192, temperature=0.7
         )
         
         # Define prompt templates for the agent
         prompt_templates = {
-            "system": """You are an expert tutor who helps assess students' learning needs.
+            "system_prompt": f"""You are an expert tutor who helps assess students' learning needs.
 When generating assessment questions:
 1. Make them specific to the subject
 2. Progress from basic to more specific topics
@@ -24,6 +24,10 @@ When generating assessment questions:
 4. Each question should be clear and end with a question mark
 5. Do not include numbering or bullet points
 6. Return exactly 4-5 questions
+
+A student has said: "{{learning_request}}"
+Generate 4-5 relevant assessment questions to understand their current knowledge level, 
+learning goals, and specific interests in this subject.
 
 You will write Python code that returns the questions. Example:
 ```python
@@ -34,14 +38,7 @@ questions = [
     "What are your goals for learning this subject?"
 ]
 final_answer(questions)
-```""",
-            "final_answer": {
-                "pre_messages": "",
-                "post_messages": """Based on the above, please provide an answer to the following user task:
-{task}
-
-Remember to return exactly 4-5 relevant assessment questions that will help understand the student's needs."""
-            }
+```"""
         }
         
         self.agent = CodeAgent(
@@ -66,13 +63,8 @@ Remember to return exactly 4-5 relevant assessment questions that will help unde
             Exception: If there's an error communicating with the LLM service
         """
         try:
-            # Create task for the agent
-            task = f"""A student has said: "{learning_request}"
-Generate 4-5 relevant assessment questions to understand their current knowledge level, 
-learning goals, and specific interests in this subject."""
-            
             # Get response from the agent
-            result = await self.agent.run(task)
+            result = await self.agent.run(learning_request=learning_request)
             
             # Validate we got enough questions
             if isinstance(result, list) and len(result) >= 3:
