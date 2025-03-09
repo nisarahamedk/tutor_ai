@@ -107,7 +107,10 @@ tutor_ai/
    - [x] Implement environment-based configuration
    - [x] Set up template system for frontend
    - [ ] Add development documentation
-   - [ ] Set up automated testing
+   - [x] Set up automated testing
+     - [x] Integration tests for API layer
+     - [x] WebSocket chat flow testing
+     - [ ] Unit tests for agents
 
 ### Medium-term
 
@@ -167,6 +170,21 @@ The application uses environment variables for configuration. These can be set i
 - `STATIC_PORT`: Port for the static file server (default: 55251)
 
 You can customize these values by editing the `.env` file.
+
+### Running Tests
+
+The project uses pytest for testing. To run the tests:
+
+1. Make sure the API server is running (needed for integration tests)
+2. Run the tests:
+   ```bash
+   poetry run pytest tests/
+   ```
+
+The test suite includes:
+- Integration tests for the API layer
+- WebSocket chat flow testing
+- Health check endpoint testing
 
 ## Development Notes
 

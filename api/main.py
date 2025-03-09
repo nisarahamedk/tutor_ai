@@ -31,10 +31,34 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            message = json.loads(data)
+            try:
+                message = json.loads(data)
+            except json.JSONDecodeError:
+                error_response = {
+                    "type": "error",
+                    "message": "Invalid JSON format"
+                }
+                await manager.send_personal_message(json.dumps(error_response), websocket)
+                continue
             
             logging.info(f"Received message: {message}")
+            if not isinstance(message, dict):
+                error_response = {
+                    "type": "error",
+                    "message": "Message must be a JSON object"
+                }
+                await manager.send_personal_message(json.dumps(error_response), websocket)
+                continue
+                
             if message.get("type") == "start_learning":
+                if "content" not in message:
+                    error_response = {
+                        "type": "error",
+                        "message": "Missing required field: content"
+                    }
+                    await manager.send_personal_message(json.dumps(error_response), websocket)
+                    continue
+                    
                 try:
                     # For now, let's directly use the PreAssessmentAgent without Temporal
                     from agents.pre_assessment_agent import PreAssessmentAgent
@@ -54,8 +78,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     }
                     await manager.send_personal_message(json.dumps(error_response), websocket)
             else:
-                # Echo the message back for now
-                await manager.send_personal_message(data, websocket)
+                error_response = {
+                    "type": "error",
+                    "message": f"Invalid message type: {message.get('type')}"
+                }
+                await manager.send_personal_message(json.dumps(error_response), websocket)
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -63,3 +90,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/")
 async def root():
     return {"message": "Welcome to Personal Tutor AI System"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
