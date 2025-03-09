@@ -19,13 +19,13 @@ async def test_generate_assessment_questions_basic():
     assert any("Python" in q for q in questions)
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.LiteLLMModel')
+@patch('agents.llm_service.Ollama')
 @patch('agents.llm_service.CodeAgent')
-async def test_generate_assessment_questions_with_litellm(mock_code_agent, mock_litellm):
-    """Test question generation with LiteLLM/Ollama integration."""
-    # Mock LiteLLM and CodeAgent
-    mock_litellm_instance = AsyncMock()
-    mock_litellm.return_value = mock_litellm_instance
+async def test_generate_assessment_questions_with_ollama(mock_code_agent, mock_ollama):
+    """Test question generation with Ollama integration."""
+    # Mock Ollama and CodeAgent
+    mock_ollama_instance = AsyncMock()
+    mock_ollama.return_value = mock_ollama_instance
     
     mock_agent_instance = AsyncMock()
     mock_agent_instance.run.return_value = [
@@ -39,13 +39,18 @@ async def test_generate_assessment_questions_with_litellm(mock_code_agent, mock_
     service = LLMService(model_name="mistral")
     questions = await service.generate_assessment_questions("I want to learn Python")
     
-    # Verify LiteLLM and CodeAgent were called correctly
-    mock_litellm.assert_called_once_with(
-        model_id="ollama/mistral",
+    # Verify Ollama and CodeAgent were called correctly
+    mock_ollama.assert_called_once_with(
+        model="mistral",
         temperature=0.7
     )
     mock_code_agent.assert_called_once()
-    mock_agent_instance.run.assert_called_once()
+    
+    # Verify the task format
+    call_args = mock_agent_instance.run.call_args[0][0]
+    assert isinstance(call_args, str)
+    assert "I want to learn Python" in call_args
+    assert "Generate 4-5 relevant assessment questions" in call_args
     
     # Verify response
     assert isinstance(questions, list)
@@ -54,13 +59,13 @@ async def test_generate_assessment_questions_with_litellm(mock_code_agent, mock_
     assert all(q.endswith("?") for q in questions)
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.LiteLLMModel')
+@patch('agents.llm_service.Ollama')
 @patch('agents.llm_service.CodeAgent')
-async def test_litellm_error_handling(mock_code_agent, mock_litellm):
-    """Test fallback behavior when LiteLLM/Ollama API fails."""
-    # Mock LiteLLM and CodeAgent to raise an exception
-    mock_litellm_instance = AsyncMock()
-    mock_litellm.return_value = mock_litellm_instance
+async def test_ollama_error_handling(mock_code_agent, mock_ollama):
+    """Test fallback behavior when Ollama API fails."""
+    # Mock Ollama and CodeAgent to raise an exception
+    mock_ollama_instance = AsyncMock()
+    mock_ollama.return_value = mock_ollama_instance
     
     mock_agent_instance = AsyncMock()
     mock_agent_instance.run.side_effect = Exception("API Error")
@@ -104,3 +109,23 @@ async def test_question_format():
         assert question.endswith("?")
         assert not question.startswith("1.") # Should not include numbering
         assert not question.startswith("-") # Should not include bullet points
+
+@pytest.mark.asyncio
+@patch('agents.llm_service.Ollama')
+@patch('agents.llm_service.CodeAgent')
+async def test_invalid_response_handling(mock_code_agent, mock_ollama):
+    """Test handling of invalid responses from the LLM."""
+    mock_ollama_instance = AsyncMock()
+    mock_ollama.return_value = mock_ollama_instance
+    
+    mock_agent_instance = AsyncMock()
+    mock_agent_instance.run.return_value = "Not a valid Python list"
+    mock_code_agent.return_value = mock_agent_instance
+    
+    service = LLMService()
+    questions = await service.generate_assessment_questions("I want to learn Python")
+    
+    # Should fall back to template-based questions
+    assert isinstance(questions, list)
+    assert len(questions) >= 3
+    assert any("Python" in q for q in questions)
