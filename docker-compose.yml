@@ -15,8 +15,7 @@ services:
       - STATIC_SERVER_URL=http://localhost:55826
       - TEMPORAL_HOST=temporal:7233
       - ENVIRONMENT=development
-    depends_on:
-      - temporal
+    
     networks:
       - tutor_network
 
@@ -35,39 +34,7 @@ services:
     networks:
       - tutor_network
 
-  temporal:
-    image: temporalio/auto-setup:1.22.3
-    ports:
-      - "7233:7233"
-      - "7234:7234"
-      - "7235:7235"
-    environment:
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
-    volumes:
-      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
-    networks:
-      - tutor_network
-
-  temporal-admin-tools:
-    image: temporalio/admin-tools:1.22.3
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-    networks:
-      - tutor_network
-
-  temporal-web:
-    image: temporalio/ui:2.21.3
-    ports:
-      - "8088:8080"
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:8088
-    depends_on:
-      - temporal
-    networks:
-      - tutor_network
+  
 
 volumes:
   poetry-cache:
