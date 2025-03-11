@@ -7,11 +7,19 @@ from smolagents import LiteLLMModel
 class LLMService:
     """Service for interacting with Language Learning Models using smolagents."""
     
-    def __init__(self, model_name: str = "mistral"):
+    def __init__(self, model_name: str = "gpt-3.5-turbo"):
         self.logger = logging.getLogger(__name__)
-        self.llm = LiteLLMModel(
+        
+        # Get OpenAI API key from environment variable
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable must be set")
             
-             model_id=model_name, api_base="http://localhost:11434", api_key="YOUR_API_KEY", num_ctx=8192, temperature=0.7
+        self.llm = LiteLLMModel(
+            model_id=model_name,
+            api_key=api_key,
+            temperature=0.7,
+            max_tokens=1000  # Reasonable limit for our use case
         )
         
         # Define prompt templates for the agent
@@ -25,7 +33,6 @@ When generating assessment questions:
 5. Do not include numbering or bullet points
 6. Return exactly 4-5 questions
 
-A student has said: "{{learning_request}}"
 Generate 4-5 relevant assessment questions to understand their current knowledge level, 
 learning goals, and specific interests in this subject.
 

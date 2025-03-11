@@ -1,6 +1,6 @@
-# Personal Tutor AI System
+# Intelligent Tutoring System (ITS) with AI Agents
 
-A sophisticated AI-powered tutoring system that provides personalized learning experiences through interactive chat sessions and intelligent workflow orchestration.
+An AI-driven tutoring system that delivers personalized and adaptive learning experiences. It leverages AI agents for assessment, guidance, and support, orchestrated through robust workflows to cater to individual learning needs.
 
 ## Project Goals
 

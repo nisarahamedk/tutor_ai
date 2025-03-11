@@ -5,37 +5,19 @@ services:
     build: 
       context: .
       target: development
-    command: poetry run uvicorn api.main:app --host 0.0.0.0 --port 53211 --reload
-    volumes:
-      - .:/app
-    ports:
-      - "53211:53211"
+    command: poetry run uvicorn api.main:app --host 0.0.0.0 --port 54269 --reload
     environment:
-      - STATIC_SERVER_URL=http://localhost:55826
-      - TEMPORAL_HOST=temporal:7233
       - ENVIRONMENT=development
-    
-    networks:
-      - tutor_network
 
   static:
     build: 
       context: .
       target: development
-    command: poetry run uvicorn api.static_server:app --host 0.0.0.0 --port 55826 --reload
-    volumes:
-      - .:/app
-    ports:
-      - "55826:55826"
+    command: poetry run uvicorn api.static_server:app --host 0.0.0.0 --port 56129 --reload
     environment:
       - ENVIRONMENT=development
-    networks:
-      - tutor_network
-
-  
-
-volumes:
-  poetry-cache:
+    ports:
+      - "56129:56129"
 
 networks:
   tutor_network:

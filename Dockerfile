@@ -20,16 +20,16 @@ RUN poetry config virtualenvs.create false
 # Copy poetry files
 COPY pyproject.toml poetry.lock* ./
 
+# Install dependencies in a separate layer to leverage Docker cache
+RUN poetry install --no-interaction --no-ansi --no-root
+
 # Development image
 FROM base as development
-
-# Install all dependencies including dev dependencies
-RUN poetry install --no-interaction --no-ansi --no-root
 
 # Copy project files
 COPY . .
 
-# Install project
+# Install all dependencies including dev dependencies
 RUN poetry install --no-interaction --no-ansi
 
 ENV PYTHONUNBUFFERED=1
@@ -41,13 +41,10 @@ CMD ["bash"]
 # Production image
 FROM base as production
 
-# Install only production dependencies
-RUN poetry install --no-interaction --no-ansi --no-root --no-dev
-
 # Copy project files
 COPY . .
 
-# Install project
+# Install only production dependencies
 RUN poetry install --no-interaction --no-ansi --no-dev
 
 ENV PYTHONUNBUFFERED=1
