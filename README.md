@@ -18,14 +18,14 @@ An AI-driven tutoring system that delivers personalized and adaptive learning ex
    - Real-time WebSocket communication for chat
    - RESTful endpoints for system interactions
    - CORS and iframe support enabled
-   - Running on configurable port (default: 54427)
+   - Running on configurable port (default: 54321)
    - Handles WebSocket connections for chat functionality
 
 2. **Frontend**
    - Simple chat interface
    - Real-time message updates
    - Support for structured responses
-   - Served on configurable port (default: 55251)
+   - Served on configurable port (default: 54322)
 
 3. **Workflow Orchestration (Temporal.io)**
    - Learning session management
@@ -144,30 +144,15 @@ tutor_ai/
 ## Getting Started
 
 1. Clone the repository
-2. Set up environment configuration:
-   ```bash
-   cp .env.example .env
-   # Edit .env file to customize ports if needed
-   ```
-3. Install dependencies using Poetry:
-   ```bash
-   poetry install
-   ```
-4. Run the servers:
-   ```bash
-   ./run_servers.sh
-   ```
-5. Access the application:
-   - Chat interface: http://localhost:{STATIC_PORT} (default: 55251)
-   - API and WebSocket: http://localhost:{API_PORT} (default: 54427)
-   - Temporal UI: http://localhost:8233 (requires port forwarding setup)
+2. Bring up the services using
+   `docker compose up`
 
 ### Environment Configuration
 
 The application uses environment variables for configuration. These can be set in the `.env` file:
 
-- `API_PORT`: Port for the main API server (default: 54427)
-- `STATIC_PORT`: Port for the static file server (default: 55251)
+- `API_PORT`: Port for the main API server (default: 54321)
+- `STATIC_PORT`: Port for the static file server (default: 54322)
 
 You can customize these values by editing the `.env` file.
 

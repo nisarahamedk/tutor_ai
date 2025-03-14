@@ -30,6 +30,7 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
+        logging.info("ConnectionManager.connect called")
         await websocket.accept()
         self.active_connections.append(websocket)
 
@@ -43,13 +44,11 @@ manager = ConnectionManager()
 
 @app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
-
+    await manager.connect(websocket)
     logging.info("WebSocket connected")
-
+    logging.info(f"WebSocket state: {websocket.client_state}")
     try:
-
         while True:
-
             data = await websocket.receive_text()
 
             try:
