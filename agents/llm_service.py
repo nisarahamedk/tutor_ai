@@ -10,14 +10,10 @@ class LLMService:
     def __init__(self, model_name: str = "gpt-3.5-turbo"):
         self.logger = logging.getLogger(__name__)
         
-        # Get OpenAI API key from environment variable
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable must be set")
-            
         self.llm = LiteLLMModel(
-            model_id=model_name,
-            api_key=api_key,
+            model_id=model_name,  # e.g., "llama3.2"
+            api_base="http://localhost:11434",  # Replace with your Ollama server address
+            num_ctx=4096, # set context window size
             temperature=0.7,
             max_tokens=1000  # Reasonable limit for our use case
         )

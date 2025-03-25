@@ -36,16 +36,16 @@ async def test_generate_assessment_questions_with_ollama(mock_code_agent, mock_l
     ]
     mock_code_agent.return_value = mock_agent_instance
     
-    service = LLMService(model_name="mistral")
+    service = LLMService(model_name="llama3.2")
     questions = await service.generate_assessment_questions("I want to learn Python")
     
     # Verify LiteLLMModel and CodeAgent were called correctly
     mock_litellm.assert_called_once_with(
-        model_id="mistral",
+        model_id="llama3.2",
         api_base="http://localhost:11434",
-        api_key="YOUR_API_KEY",
-        num_ctx=8192,
-        temperature=0.7
+        num_ctx=4096,
+        temperature=0.7,
+        max_tokens=1000
     )
     mock_code_agent.assert_called_once()
     
