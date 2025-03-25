@@ -41,17 +41,32 @@ An AI-driven tutoring system that delivers personalized and adaptive learning ex
 ```
 tutor_ai/
 ├── README.md
-├── api/
-│   ├── main.py              # Main FastAPI application with WebSocket support
-│   └── static_server.py     # Static file server for frontend
 ├── agents/
-│   └── pre_assessment_agent.py  # AI agent for initial assessment
-├── workflows/
-│   └── learning_workflow.py     # Temporal workflow definitions
-├── static/
-│   └── index.html              # Chat interface
-├── venv/                       # Python virtual environment
-└── run_servers.sh             # Script to run both API and static servers
+│   ├── llm_service.py
+│   └── pre_assessment_agent.py
+├── api/
+│   ├── cors_config.py
+│   ├── main.py
+│   └── static_server.py
+├── docker-compose.yml
+├── poetry.lock
+├── pyproject.toml
+├── scripts/
+│   └── init-poetry.sh
+├── templates/
+│   ├── css/
+│   │   └── style.css
+│   └── index.html
+├── temporal/
+│   └── dynamicconfig/
+│       └── development.yaml
+└── tests/
+    ├── integration/
+    │   └── test_api.py
+    └── unit/
+        └── agents/
+            ├── test_llm_service.py
+            └── test_pre_assessment_agent.py
 ```
 
 ## Current Implementation
