@@ -23,11 +23,11 @@ The project will be implemented in the following phases:
     *   Temporal.io setup for managing chat sessions.
 *   **Key Tasks:**
     *   **Frontend (React):**
-        *   Set up React project structure.
+        *   Set up Next.js frontend project structure, including `app/` router, `components/ui/` (for shadcn/ui), `features/ai-tutor/`, and `lib/ag-ui-client.ts` stub.
         *   Implement basic chat UI (message display, input field).
         *   Integrate AG-UI client for basic WebSocket/SSE communication.
     *   **Backend (FastAPI):**
-        *   Set up FastAPI project.
+        *   Set up FastAPI backend project structure, including initial directories for `app/api/v1/endpoints/` (with `chat.py` stub), `app/core/`, `app/db/` (for Supabase integration), `app/agents/`, and `app/temporal/`.
         *   Develop API endpoints for receiving and sending chat messages.
         *   Integrate AG-UI server for handling frontend connections.
         *   Integrate Supabase for basic user authentication and session management.
