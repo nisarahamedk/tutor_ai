@@ -1,0 +1,3800 @@
+TITLE: Implementing AG-UI Chat Endpoint with OpenAI Streaming in TypeScript
+DESCRIPTION: This TypeScript code sets up an Express.js server that exposes a `/awp` endpoint. It processes incoming AG-UI `RunAgentInput` requests, converts AG-UI messages to OpenAI's format, streams responses from the OpenAI `gpt-3.5-turbo` model, and encodes these responses as various AG-UI events (e.g., `RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `RUN_FINISHED`) using Server-Sent Events (SSE). The endpoint ensures real-time streaming of AI-generated content back to the client.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_18
+
+LANGUAGE: typescript
+CODE:
+```
+import express, { Request, Response } from "express"
+import {
+  RunAgentInputSchema,
+  RunAgentInput,
+  EventType,
+  Message,
+} from "@ag-ui/core"
+import { EventEncoder } from "@ag-ui/encoder"
+import { OpenAI } from "openai"
+import { v4 as uuidv4 } from "uuid"
+
+const app = express()
+
+app.use(express.json())
+
+app.post("/awp", async (req: Request, res: Response) => {
+  try {
+    // Parse and validate the request body
+    const input: RunAgentInput = RunAgentInputSchema.parse(req.body)
+
+    // Set up SSE headers
+    res.setHeader("Content-Type", "text/event-stream")
+    res.setHeader("Cache-Control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+
+    // Create an event encoder
+    const encoder = new EventEncoder()
+
+    // Send run started event
+    const runStarted = {
+      type: EventType.RUN_STARTED,
+      threadId: input.threadId,
+      runId: input.runId,
+    }
+    res.write(encoder.encode(runStarted))
+
+    // Initialize OpenAI client
+    const client = new OpenAI()
+
+    // Convert AG-UI messages to OpenAI messages format
+    const openaiMessages = input.messages
+      .filter((msg: Message) =>
+        ["user", "system", "assistant"].includes(msg.role)
+      )
+      .map((msg: Message) => ({
+        role: msg.role as "user" | "system" | "assistant",
+        content: msg.content || "",
+      }))
+
+    // Generate a message ID for the assistant's response
+    const messageId = uuidv4()
+
+    // Send text message start event
+    const textMessageStart = {
+      type: EventType.TEXT_MESSAGE_START,
+      messageId,
+      role: "assistant",
+    }
+    res.write(encoder.encode(textMessageStart))
+
+    // Create a streaming completion request
+    const stream = await client.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: openaiMessages,
+      stream: true,
+    })
+
+    // Process the streaming response and send content events
+    for await (const chunk of stream) {
+      if (chunk.choices[0]?.delta?.content) {
+        const content = chunk.choices[0].delta.content
+        const textMessageContent = {
+          type: EventType.TEXT_MESSAGE_CONTENT,
+          messageId,
+          delta: content,
+        }
+        res.write(encoder.encode(textMessageContent))
+      }
+    }
+
+    // Send text message end event
+    const textMessageEnd = {
+      type: EventType.TEXT_MESSAGE_END,
+      messageId,
+    }
+    res.write(encoder.encode(textMessageEnd))
+
+    // Send run finished event
+    const runFinished = {
+      type: EventType.RUN_FINISHED,
+      threadId: input.threadId,
+      runId: input.runId,
+    }
+    res.write(encoder.encode(runFinished))
+
+    // End the response
+    res.end()
+  } catch (error) {
+    res.status(422).json({ error: (error as Error).message })
+  }
+})
+
+app.listen(8000, () => {
+  console.log("Server running on http://localhost:8000")
+})
+```
+
+----------------------------------------
+
+TITLE: Defining Text Message Content Event in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for the `TEXT_MESSAGE_CONTENT` event, used to stream chunks of text content for a message. It includes the event `type`, the `messageId` of the message being streamed, and the `delta` string containing the text chunk to append.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+```
+interface TextMessageContentEvent {
+  type: EventType.TEXT_MESSAGE_CONTENT
+  messageId: string
+  delta: string // Text chunk to append
+}
+```
+
+----------------------------------------
+
+TITLE: Implementing Streaming OpenAI Agent with AG-UI in TypeScript
+DESCRIPTION: This TypeScript class, `OpenAIAgent`, extends `AbstractAgent` from `@ag-ui/client` to integrate with OpenAI's streaming chat completions API. It initializes the OpenAI client, transforms AG-UI input messages and tools into OpenAI's format, and streams back responses as `TEXT_MESSAGE_CHUNK` or `TOOL_CALL_CHUNK` events. It also includes error handling and emits `RUN_STARTED` and `RUN_FINISHED` events.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_13
+
+LANGUAGE: typescript
+CODE:
+```
+// integrations/openai/src/index.ts
+import {
+  AbstractAgent,
+  RunAgentInput,
+  EventType,
+  BaseEvent,
+} from "@ag-ui/client"
+import { Observable } from "rxjs"
+
+import { OpenAI } from "openai"
+
+export class OpenAIAgent extends AbstractAgent {
+  private openai: OpenAI
+
+  constructor(openai?: OpenAI) {
+    super()
+    // Initialize OpenAI client - uses OPENAI_API_KEY from environment if not provided
+    this.openai = openai ?? new OpenAI()
+  }
+
+  protected run(input: RunAgentInput): Observable<BaseEvent> {
+    return new Observable<BaseEvent>((observer) => {
+      // Same as before - emit RUN_STARTED to begin
+      observer.next({
+        type: EventType.RUN_STARTED,
+        threadId: input.threadId,
+        runId: input.runId,
+      } as any)
+
+      // NEW: Instead of hardcoded response, call OpenAI's API
+      this.openai.chat.completions
+        .create({
+          model: "gpt-4o",
+          stream: true, // Enable streaming for real-time responses
+          // Convert AG-UI tools format to OpenAI's expected format
+          tools: input.tools.map((tool) => ({
+            type: "function",
+            function: {
+              name: tool.name,
+              description: tool.description,
+              parameters: tool.parameters,
+            },
+          })),
+          // Transform AG-UI messages to OpenAI's message format
+          messages: input.messages.map((message) => ({
+            role: message.role as any,
+            content: message.content ?? "",
+            // Include tool calls if this is an assistant message with tools
+            ...(message.role === "assistant" && message.toolCalls
+              ? {
+                  tool_calls: message.toolCalls,
+                }
+              : {}),
+            // Include tool call ID if this is a tool result message
+            ...(message.role === "tool"
+              ? { tool_call_id: message.toolCallId }
+              : {}),
+          })),
+        })
+        .then(async (response) => {
+          const messageId = Date.now().toString()
+
+          // NEW: Stream each chunk from OpenAI's response
+          for await (const chunk of response) {
+            // Handle text content chunks
+            if (chunk.choices[0].delta.content) {
+              observer.next({
+                type: EventType.TEXT_MESSAGE_CHUNK, // Chunk events open and close messages automatically
+                messageId,
+                delta: chunk.choices[0].delta.content,
+              } as any)
+            }
+            // Handle tool call chunks (when the model wants to use a function)
+            else if (chunk.choices[0].delta.tool_calls) {
+              let toolCall = chunk.choices[0].delta.tool_calls[0]
+
+              observer.next({
+                type: EventType.TOOL_CALL_CHUNK,
+                toolCallId: toolCall.id,
+                toolCallName: toolCall.function?.name,
+                parentMessageId: messageId,
+                delta: toolCall.function?.arguments,
+              } as any)
+            }
+          }
+
+          // Same as before - emit RUN_FINISHED when complete
+          observer.next({
+            type: EventType.RUN_FINISHED,
+            threadId: input.threadId,
+            runId: input.runId,
+          } as any)
+
+          observer.complete()
+        })
+        // NEW: Handle errors from the API
+        .catch((error) => {
+          observer.next({
+            type: EventType.RUN_ERROR,
+            message: error.message,
+          } as any)
+
+          observer.error(error)
+        })
+    })
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Installing @ag-ui/core package (Bash)
+DESCRIPTION: This command installs the core Agent User Interaction Protocol SDK package using npm, the Node.js package manager. It is the first step to include the SDK in your project.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/overview.mdx#_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+npm install @ag-ui/core
+```
+
+----------------------------------------
+
+TITLE: Implementing Streaming Chat Endpoint with FastAPI and OpenAI
+DESCRIPTION: This Python snippet defines a FastAPI endpoint that integrates with OpenAI's API to stream chat completions. It uses AG-UI's `EventEncoder` to format responses as Server-Sent Events (SSE), including `RunStartedEvent`, `TextMessageStartEvent`, `TextMessageContentEvent`, `TextMessageEndEvent`, and `RunFinishedEvent` for real-time updates.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_8
+
+LANGUAGE: python
+CODE:
+```
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
+from ag_ui.core import (
+  RunAgentInput,
+  Message,
+  EventType,
+  RunStartedEvent,
+  RunFinishedEvent,
+  TextMessageStartEvent,
+  TextMessageContentEvent,
+  TextMessageEndEvent
+)
+from ag_ui.encoder import EventEncoder
+import uuid
+from openai import OpenAI
+
+app = FastAPI(title="AG-UI Endpoint")
+
+@app.post("/awp")
+async def my_endpoint(input_data: RunAgentInput):
+    async def event_generator():
+        # Create an event encoder to properly format SSE events
+        encoder = EventEncoder()
+
+        # Send run started event
+        yield encoder.encode(
+          RunStartedEvent(
+            type=EventType.RUN_STARTED,
+            thread_id=input_data.thread_id,
+            run_id=input_data.run_id
+          )
+        )
+
+        # Initialize OpenAI client
+        client = OpenAI()
+
+        # Generate a message ID for the assistant's response
+        message_id = uuid.uuid4()
+
+        # Send text message start event
+        yield encoder.encode(
+            TextMessageStartEvent(
+                type=EventType.TEXT_MESSAGE_START,
+                message_id=message_id,
+                role="assistant"
+            )
+        )
+
+        # Create a streaming completion request
+        stream = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=openai_messages,
+            stream=True
+        )
+
+        # Process the streaming response and send content events
+        for chunk in stream:
+            if hasattr(chunk.choices[0].delta, "content") and chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                yield encoder.encode(
+                    TextMessageContentEvent(
+                        type=EventType.TEXT_MESSAGE_CONTENT,
+                        message_id=message_id,
+                        delta=content
+                    )
+                )
+
+        # Send text message end event
+        yield encoder.encode(
+            TextMessageEndEvent(
+                type=EventType.TEXT_MESSAGE_END,
+                message_id=message_id
+            )
+        )
+
+        # Send run finished event
+        yield encoder.encode(
+          RunFinishedEvent(
+            type=EventType.RUN_FINISHED,
+            thread_id=input_data.thread_id,
+            run_id=input_data.run_id
+          )
+        )
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+----------------------------------------
+
+TITLE: State Management Event Flow - Mermaid
+DESCRIPTION: This sequence diagram depicts the snapshot-delta pattern for state management, showing initial `StateSnapshot` transfers, subsequent `StateDelta` incremental updates, and occasional full `StateSnapshot` refreshes, including `MessagesSnapshot` for conversation history. This optimizes for both completeness and efficiency.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/events.mdx#_snippet_3
+
+LANGUAGE: Mermaid
+CODE:
+```
+sequenceDiagram
+    participant Agent
+    participant Client
+
+    Note over Agent,Client: Initial state transfer
+    Agent->>Client: StateSnapshot
+
+    Note over Agent,Client: Incremental updates
+    loop State changes over time
+        Agent->>Client: StateDelta
+        Agent->>Client: StateDelta
+    end
+
+    Note over Agent,Client: Occasional full refresh
+    Agent->>Client: StateSnapshot
+
+    loop More incremental updates
+        Agent->>Client: StateDelta
+    end
+
+    Note over Agent,Client: Message history update
+    Agent->>Client: MessagesSnapshot
+```
+
+----------------------------------------
+
+TITLE: Converting AG-UI Messages to OpenAI Format (TypeScript)
+DESCRIPTION: Demonstrates how to transform an array of AG-UI messages into a format compatible with the OpenAI API. It filters for relevant roles ("user", "system", "assistant"), maps fields, and includes tool calls if present in assistant messages, ensuring vendor neutrality.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_6
+
+LANGUAGE: typescript
+CODE:
+```
+// Example: Converting AG-UI messages to OpenAI format
+const openaiMessages = agUiMessages
+  .filter((msg) => ["user", "system", "assistant"].includes(msg.role))
+  .map((msg) => ({
+    role: msg.role as "user" | "system" | "assistant",
+    content: msg.content || "",
+    // Map tool calls if present
+    ...(msg.role === "assistant" && msg.toolCalls
+      ? {
+          tool_calls: msg.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: tc.type,
+            function: {
+              name: tc.function.name,
+              arguments: tc.function.arguments,
+            },
+          })),
+        }
+      : {}),
+  }))
+```
+
+----------------------------------------
+
+TITLE: Implementing a Simple Agent with Event Streaming in TypeScript
+DESCRIPTION: Shows a basic implementation of a custom agent extending `AbstractAgent` that uses an RxJS Observable to emit a sequence of AG-UI events, including run start, text message streaming, and run finish.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+import {
+  AbstractAgent,
+  RunAgent,
+  RunAgentInput,
+  EventType,
+  BaseEvent,
+} from "@ag-ui/client"
+import { Observable } from "rxjs"
+
+class SimpleAgent extends AbstractAgent {
+  protected run(input: RunAgentInput): RunAgent {
+    const { threadId, runId } = input
+
+    return () =>
+      new Observable<BaseEvent>((observer) => {
+        // Emit RUN_STARTED event
+        observer.next({
+          type: EventType.RUN_STARTED,
+          threadId,
+          runId,
+        })
+
+        // Send a message
+        const messageId = Date.now().toString()
+
+        // Message start
+        observer.next({
+          type: EventType.TEXT_MESSAGE_START,
+          messageId,
+          role: "assistant",
+        })
+
+        // Message content
+        observer.next({
+          type: EventType.TEXT_MESSAGE_CONTENT,
+          messageId,
+          delta: "Hello, world!",
+        })
+
+        // Message end
+        observer.next({
+          type: EventType.TEXT_MESSAGE_END,
+          messageId,
+        })
+
+        // Emit RUN_FINISHED event
+        observer.next({
+          type: EventType.RUN_FINISHED,
+          threadId,
+          runId,
+        })
+
+        // Complete the observable
+        observer.complete()
+      })
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Setting OpenAI API Key - Bash
+DESCRIPTION: This command sets your OpenAI API key as an environment variable. This key is essential for authenticating requests to the OpenAI API and should be replaced with your actual key.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+export OPENAI_API_KEY=your-api-key-here
+```
+
+----------------------------------------
+
+TITLE: Complete Conversation Example with Tool Usage in TypeScript
+DESCRIPTION: Presents a full conversation history array demonstrating the flow of messages involving tool calls: a user query, an assistant response with a tool call, a tool result message, and the assistant's final response based on the result.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_17
+
+LANGUAGE: typescript
+CODE:
+```
+// Conversation history
+;[
+  // User query
+  {
+    id: "msg_1",
+    role: "user",
+    content: "What's the weather in New York?",
+  },
+
+  // Assistant response with tool call
+  {
+    id: "msg_2",
+    role: "assistant",
+    content: "Let me check the weather for you.",
+    toolCalls: [
+      {
+        id: "call_1",
+        type: "function",
+        function: {
+          name: "get_weather",
+          arguments: '{"location": "New York", "unit": "celsius"}',
+        },
+      },
+    ],
+  },
+
+  // Tool result
+  {
+    id: "result_1",
+    role: "tool",
+    content:
+      '{"temperature": 22, "condition": "Partly Cloudy", "humidity": 65}',
+    toolCallId: "call_1",
+  },
+
+  // Assistant's final response using tool results
+  {
+    id: "msg_3",
+    role: "assistant",
+    content:
+      "The weather in New York is partly cloudy with a temperature of 22°C and 65% humidity.",
+  },
+]
+```
+
+----------------------------------------
+
+TITLE: Defining Discriminated Event Union in Python
+DESCRIPTION: This Python snippet shows how the main Event type is defined as a Pydantic Annotated union of various specific event classes. It uses Field(discriminator="type") to enable runtime validation and type checking based on the 'type' attribute present in all event objects.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_18
+
+LANGUAGE: python
+CODE:
+```
+Event = Annotated[
+    Union[
+        TextMessageStartEvent,
+        TextMessageContentEvent,
+        TextMessageEndEvent,
+        ToolCallStartEvent,
+        ToolCallArgsEvent,
+        ToolCallEndEvent,
+        StateSnapshotEvent,
+        StateDeltaEvent,
+        MessagesSnapshotEvent,
+        RawEvent,
+        CustomEvent,
+        RunStartedEvent,
+        RunFinishedEvent,
+        RunErrorEvent,
+        StepStartedEvent,
+        StepFinishedEvent,
+    ],
+    Field(discriminator="type")
+]
+```
+
+----------------------------------------
+
+TITLE: Extending AbstractAgent in TypeScript
+DESCRIPTION: Shows the basic structure for creating a custom agent by extending the `AbstractAgent` class and implementing the required `run` method.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+import { AbstractAgent } from "@ag-ui/client"
+
+class MyAgent extends AbstractAgent {
+  protected run(input: RunAgentInput): RunAgent {
+    // Implementation details
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Streaming AG-UI Events with Server-Sent Events (TypeScript)
+DESCRIPTION: This snippet extends the Express endpoint to support Server-Sent Events (SSE) for streaming AG-UI events. After parsing and validating the input, it sets the necessary SSE headers. It then uses `EventEncoder` from `@ag-ui/encoder` to encode `RUN_STARTED` and `RUN_FINISHED` events, writing them to the response stream before ending the connection.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_17
+
+LANGUAGE: TypeScript
+CODE:
+```
+import express, { Request, Response } from "express"
+import { RunAgentInputSchema, RunAgentInput, EventType } from "@ag-ui/core"
+import { EventEncoder } from "@ag-ui/encoder"
+
+const app = express()
+
+app.use(express.json())
+
+app.post("/awp", async (req: Request, res: Response) => {
+  try {
+    // Parse and validate the request body
+    const input: RunAgentInput = RunAgentInputSchema.parse(req.body)
+
+    // Set up SSE headers
+    res.setHeader("Content-Type", "text/event-stream")
+    res.setHeader("Cache-Control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+
+    // Create an event encoder
+    const encoder = new EventEncoder()
+
+    // Send run started event
+    const runStarted = {
+      type: EventType.RUN_STARTED,
+      threadId: input.threadId,
+      runId: input.runId,
+    }
+    res.write(encoder.encode(runStarted))
+
+    // Send run finished event
+    const runFinished = {
+      type: EventType.RUN_FINISHED,
+      threadId: input.threadId,
+      runId: input.runId,
+    }
+    res.write(encoder.encode(runFinished))
+
+    // End the response
+    res.end()
+  } catch (error) {
+    res.status(422).json({ error: (error as Error).message })
+  }
+})
+
+app.listen(8000, () => {
+  console.log("Server running on http://localhost:8000")
+})
+```
+
+----------------------------------------
+
+TITLE: Defining Content Generation Tool Schema (TypeScript)
+DESCRIPTION: Provides the schema definition for a generateImage tool. It specifies the tool's name, description, and parameters, including a required prompt string and optional style string and dimensions object. This schema enables the agent to request image generation.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_10
+
+LANGUAGE: TypeScript
+CODE:
+```
+{
+  name: "generateImage",
+  description: "Generate an image based on a description",
+  parameters: {
+    type: "object",
+    properties: {
+      prompt: {
+        type: "string",
+        description: "Description of the image to generate"
+      },
+      style: {
+        type: "string",
+        description: "Visual style for the image"
+      },
+      dimensions: {
+        type: "object",
+        properties: {
+          width: { type: "number" },
+          height: { type: "number" }
+        },
+        description: "Dimensions of the image"
+      }
+    },
+    required: ["prompt"]
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Running an Agent with HttpAgent Client
+DESCRIPTION: Shows how to create an instance of the `HttpAgent` client, configure it with a URL and IDs, execute the `runAgent` method with parameters, and subscribe to the resulting observable to handle incoming events.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/architecture.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+// Create an HTTP agent client
+const agent = new HttpAgent({
+  url: "https://your-agent-endpoint.com/agent",
+  agentId: "unique-agent-id",
+  threadId: "conversation-thread"
+});
+
+// Start the agent and handle events
+agent.runAgent({
+  tools: [...],
+  context: [...]
+}).subscribe({
+  next: (event) => {
+    // Handle different event types
+    switch(event.type) {
+      case EventType.TEXT_MESSAGE_CONTENT:
+        // Update UI with new content
+        break;
+      // Handle other event types
+    }
+  },
+  error: (error) => console.error("Agent error:", error),
+  complete: () => console.log("Agent run complete")
+});
+```
+
+----------------------------------------
+
+TITLE: Implementing Server-Sent Events (SSE) for AG-UI (Python)
+DESCRIPTION: This Python code enhances the FastAPI endpoint to support Server-Sent Events (SSE) for streaming AG-UI events. It uses `StreamingResponse` and an `EventEncoder` to send `RunStartedEvent` and `RunFinishedEvent` back to the client, demonstrating real-time communication within the AG-UI protocol.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_7
+
+LANGUAGE: python
+CODE:
+```
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import StreamingResponse
+from ag_ui.core import RunAgentInput, Message, EventType, RunStartedEvent, RunFinishedEvent
+from ag_ui.encoder import EventEncoder
+
+app = FastAPI(title="AG-UI Endpoint")
+
+@app.post("/awp")
+async def my_endpoint(input_data: RunAgentInput):
+    async def event_generator():
+        # Create an event encoder to properly format SSE events
+        encoder = EventEncoder()
+
+        # Send run started event
+        yield encoder.encode(
+          RunStartedEvent(
+            type=EventType.RUN_STARTED,
+            thread_id=input_data.thread_id,
+            run_id=input_data.run_id
+          )
+        )
+
+        # Send run finished event
+        yield encoder.encode(
+          RunFinishedEvent(
+            type=EventType.RUN_FINISHED,
+            thread_id=input_data.thread_id,
+            run_id=input_data.run_id
+          )
+        )
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+----------------------------------------
+
+TITLE: Defining RunAgentInput Class (Python)
+DESCRIPTION: Defines the `RunAgentInput` class, a Pydantic model used to structure the input parameters for running an agent in the Agent UI Protocol Python SDK. It includes fields for thread ID, run ID, agent state, message history, available tools, context objects, and forwarded properties. This structure is typically used as the body for HTTP POST requests to initiate an agent run.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_0
+
+LANGUAGE: Python
+CODE:
+```
+class RunAgentInput(ConfiguredBaseModel):
+    thread_id: str
+    run_id: str
+    state: Any
+    messages: List[Message]
+    tools: List[Tool]
+    context: List[Context]
+    forwarded_props: Any
+```
+
+----------------------------------------
+
+TITLE: Defining a Custom AG-UI Agent
+DESCRIPTION: Illustrates the core `RunAgent` interface and provides an example implementation of a simple agent that returns a predefined sequence of lifecycle and message events.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/architecture.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+// Core agent execution interface
+type RunAgent = () => Observable<BaseEvent>
+
+class MyAgent extends AbstractAgent {
+  run(input: RunAgentInput): RunAgent {
+    const { threadId, runId } = input
+    return () =>
+      from([
+        { type: EventType.RUN_STARTED, threadId, runId },
+        {
+          type: EventType.MESSAGES_SNAPSHOT,
+          messages: [
+            { id: "msg_1", role: "assistant", content: "Hello, world!" }
+          ],
+        },
+        { type: EventType.RUN_FINISHED, threadId, runId },
+      ])
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Backend Agent Emitting State Updates (Python)
+DESCRIPTION: Shows a Python LangGraph agent function updating its internal state and emitting the changes to the frontend using a `copilotkit_emit_state` function, facilitating bidirectional synchronization.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_10
+
+LANGUAGE: Python
+CODE:
+```
+# In the LangGraph agent
+async def tool_node(self, state: ResearchState, config: RunnableConfig):
+    # Update state with new information
+    tool_state = {
+        "title": new_state.get("title", ""),
+        "outline": new_state.get("outline", {}),
+        "sections": new_state.get("sections", []),
+        # Other state properties...
+    }
+
+    # Emit updated state to frontend
+    await copilotkit_emit_state(config, tool_state)
+
+    return tool_state
+```
+
+----------------------------------------
+
+TITLE: Running an HttpAgent and Handling Events - TypeScript
+DESCRIPTION: This snippet demonstrates how to create an instance of HttpAgent, optionally set initial messages, run the agent with specific parameters (runId, tools, context), and subscribe to the agent's event stream to handle different event types, such as text message content.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+// Create an agent instance
+const agent = new HttpAgent({
+  url: "https://your-agent-endpoint.com/agent",
+})
+
+// Add initial messages if needed
+agent.messages = [
+  {
+    id: "1",
+    role: "user",
+    content: "Hello, how can you help me today?",
+  },
+]
+
+// Run the agent
+agent
+  .runAgent({
+    runId: "run_123",
+    tools: [], // Optional tools
+    context: [], // Optional context
+  })
+  .subscribe({
+    next: (event) => {
+      // Handle different event types
+      switch (event.type) {
+        case EventType.TEXT_MESSAGE_CONTENT:
+          console.log("Content:", event.delta)
+          break
+        // Handle other events
+      }
+    },
+    error: (error) => console.error("Error:", error),
+    complete: () => console.log("Run complete"),
+  })
+```
+
+----------------------------------------
+
+TITLE: Creating a Custom Agent Class in TypeScript
+DESCRIPTION: Provides a template for defining a custom agent class by extending `AbstractAgent`, indicating where custom properties, methods, and the `run` method implementation would go.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+class CustomAgent extends AbstractAgent {
+  // Custom properties and methods
+
+  protected run(input: RunAgentInput): RunAgent {
+    // Implement the agent's logic
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Illustrating Lifecycle Events Flow - Mermaid
+DESCRIPTION: This Mermaid sequence diagram illustrates the typical flow of lifecycle events in an Agent User Interaction Protocol run. It shows the mandatory RunStarted event, optional StepStarted and StepFinished pairs, and the concluding RunFinished or RunError event, demonstrating how agents and clients communicate run progression.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/events.mdx#_snippet_0
+
+LANGUAGE: mermaid
+CODE:
+```
+sequenceDiagram
+    participant Agent
+    participant Client
+
+    Note over Agent,Client: Run begins
+    Agent->>Client: RunStarted
+
+    opt Sending steps is optional
+        Note over Agent,Client: Step execution
+        Agent->>Client: StepStarted
+        Agent->>Client: StepFinished
+    end
+
+    Note over Agent,Client: Run completes
+    alt
+        Agent->>Client: RunFinished
+    else
+        Agent->>Client: RunError
+    end
+```
+
+----------------------------------------
+
+TITLE: Tool Call Event Flow - Mermaid
+DESCRIPTION: This sequence diagram illustrates the lifecycle of a tool call, showing the streaming pattern from `ToolCallStart` to `ToolCallArgs` (for arguments streaming) and concluding with `ToolCallEnd`. This allows frontends to display tool execution in real-time.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/events.mdx#_snippet_2
+
+LANGUAGE: Mermaid
+CODE:
+```
+sequenceDiagram
+    participant Agent
+    participant Client
+
+    Note over Agent,Client: Tool call begins
+    Agent->>Client: ToolCallStart
+
+    loop Arguments streaming
+        Agent->>Client: ToolCallArgs
+    end
+
+    Note over Agent,Client: Tool call completes
+    Agent->>Client: ToolCallEnd
+```
+
+----------------------------------------
+
+TITLE: Integrating AG-UI Tools with CopilotKit (TSX)
+DESCRIPTION: Demonstrates how to use the useCopilotAction hook from CopilotKit to define and handle an AG-UI tool (confirmAction) within a React component. It shows the basic structure for defining the tool's name, description, parameters, and handler function.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_6
+
+LANGUAGE: TSX
+CODE:
+```
+import { useCopilotAction } from "@copilotkit/react-core"
+
+// Define a tool for user confirmation
+useCopilotAction({
+  name: "confirmAction",
+  description: "Ask the user to confirm an action",
+  parameters: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        description: "The action to confirm",
+      },
+    },
+    required: ["action"],
+  },
+  handler: async ({ action }) => {
+    // Show a confirmation dialog
+    const confirmed = await showConfirmDialog(action)
+    return confirmed ? "approved" : "rejected"
+  },
+})
+```
+
+----------------------------------------
+
+TITLE: Creating a Basic FastAPI AG-UI Endpoint (Python)
+DESCRIPTION: This Python code defines a basic FastAPI application with a `/awp` POST endpoint that returns a 'Hello World' message. It sets up the server to run on `0.0.0.0:8000` using Uvicorn, serving as an initial AG-UI compatible endpoint.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+from fastapi import FastAPI, Request
+import json
+from ag_ui.core.types import RunAgentInput
+
+app = FastAPI(title="AG-UI Endpoint")
+
+@app.post("/awp")
+async def my_endpoint():
+    return { "message": "Hello World" }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+----------------------------------------
+
+TITLE: Defining RunAgentInput Type (TypeScript)
+DESCRIPTION: Defines the structure for input parameters when running an agent. This type is used as the body for the HTTP POST request in the API. It includes properties like thread ID, run ID, state, messages, tools, context, and forwarded properties.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+type RunAgentInput = {
+  threadId: string
+  runId: string
+  state: any
+  messages: Message[]
+  tools: Tool[]
+  context: Context[]
+  forwardedProps: any
+}
+```
+
+----------------------------------------
+
+TITLE: Example Assistant Message with ToolCall in TypeScript
+DESCRIPTION: Provides a concrete example of an assistant message object containing a 'toolCalls' array, demonstrating how a tool call is represented with its ID, type, and function details.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_12
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  id: "msg_123",
+  role: "assistant",
+  content: "I'll help you with that calculation.",
+  toolCalls: [
+    {
+      id: "call_456",
+      type: "function",
+      function: {
+        name: "calculate",
+        arguments: '{"expression": "24 * 7"}'
+      }
+    }
+  ]
+}
+```
+
+----------------------------------------
+
+TITLE: Stub AG-UI Agent Implementation - TypeScript
+DESCRIPTION: This TypeScript code provides the initial stub implementation of the `OpenAIAgent` class, demonstrating how it extends `AbstractAgent` and emits a sequence of AG-UI events. It uses an RxJS `Observable` to simulate a chat interaction by sending a 'Hello world!' message.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_11
+
+LANGUAGE: typescript
+CODE:
+```
+// integrations/openai/src/index.ts
+import {
+  AbstractAgent,
+  BaseEvent,
+  EventType,
+  RunAgentInput
+} from "@ag-ui/client"
+import { Observable } from "rxjs"
+
+export class OpenAIAgent extends AbstractAgent {
+  protected run(input: RunAgentInput): Observable<BaseEvent> {
+    const messageId = Date.now().toString()
+    return new Observable<BaseEvent>((observer) => {
+      observer.next({
+        type: EventType.RUN_STARTED,
+        threadId: input.threadId,
+        runId: input.runId
+      } as any)
+
+      observer.next({
+        type: EventType.TEXT_MESSAGE_START,
+        messageId
+      } as any)
+
+      observer.next({
+        type: EventType.TEXT_MESSAGE_CONTENT,
+        messageId,
+        delta: "Hello world!"
+      } as any)
+
+      observer.next({
+        type: EventType.TEXT_MESSAGE_END,
+        messageId
+      } as any)
+
+      observer.next({
+        type: EventType.RUN_FINISHED,
+        threadId: input.threadId,
+        runId: input.runId
+      } as any)
+
+      observer.complete()
+    })
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Tool Class (Python)
+DESCRIPTION: Defines the `Tool` class, a Pydantic model representing a tool that an agent can call. It includes the tool's `name`, a `description` of its functionality, and `parameters` defined by a JSON Schema. Requires importing `Tool` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_11
+
+LANGUAGE: python
+CODE:
+```
+class Tool(ConfiguredBaseModel):
+    name: str
+    description: str
+    parameters: Any  # JSON Schema
+```
+
+----------------------------------------
+
+TITLE: Parsing AG-UI Input with Express and Zod (TypeScript)
+DESCRIPTION: This snippet sets up a basic Express server to receive POST requests at '/awp'. It uses `express.json()` to parse the request body and then validates it against the `RunAgentInputSchema` from `@ag-ui/core` using Zod. If validation fails, it returns a 422 Unprocessable Entity error; otherwise, it sends a success message.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_16
+
+LANGUAGE: TypeScript
+CODE:
+```
+import express, { Request, Response } from "express"
+import { RunAgentInputSchema, RunAgentInput } from "@ag-ui/core"
+
+const app = express()
+
+app.use(express.json())
+
+app.post("/awp", (req: Request, res: Response) => {
+  try {
+    // Parse and validate the request body
+    const input: RunAgentInput = RunAgentInputSchema.parse(req.body)
+    res.json({ message: `Hello World from ${input.threadId}` })
+  } catch (error) {
+    res.status(422).json({ error: (error as Error).message })
+  }
+})
+
+app.listen(8000, () => {
+  console.log("Server running on http://localhost:8000")
+})
+```
+
+----------------------------------------
+
+TITLE: Parsing AG-UI Input with FastAPI and Pydantic (Python)
+DESCRIPTION: This updated Python code modifies the FastAPI endpoint to automatically parse incoming request bodies into a `RunAgentInput` Pydantic model. It extracts the `thread_id` from the validated input, demonstrating how to handle structured AG-UI protocol requests.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_6
+
+LANGUAGE: python
+CODE:
+```
+from fastapi import FastAPI, Request, HTTPException
+from ag_ui.core import RunAgentInput, Message
+
+app = FastAPI(title="AG-UI Endpoint")
+
+@app.post("/awp")
+async def my_endpoint(input_data: RunAgentInput):
+    thread_id = input_data.thread_id
+
+    return { "message": "Hello World from " + thread_id }
+```
+
+----------------------------------------
+
+TITLE: Defining and Using Agent Tools (TypeScript)
+DESCRIPTION: This snippet demonstrates how to define a tool object with a name, description, and parameters schema, and then pass it to the agent's runAgent method. Tools allow the frontend application to define actions the agent can request, enabling human-in-the-loop workflows. It requires an agent instance.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_4
+
+LANGUAGE: typescript
+CODE:
+```
+// Tool definition
+const confirmAction = {
+  name: "confirmAction",
+  description: "Ask the user to confirm a specific action before proceeding",
+  parameters: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        description: "The action that needs user confirmation"
+      },
+      importance: {
+        type: "string",
+        enum: ["low", "medium", "high", "critical"],
+        description: "The importance level of the action"
+      },
+      details: {
+        type: "string",
+        description: "Additional details about the action"
+      }
+    },
+    required: ["action"]
+  }
+}
+
+// Running an agent with tools from the frontend
+agent.runAgent({
+  tools: [confirmAction], // Frontend-defined tools passed to the agent
+  // other parameters
+})
+```
+
+----------------------------------------
+
+TITLE: Server-Sent Event (SSE) Output Format
+DESCRIPTION: This snippet illustrates the standard Server-Sent Event (SSE) format used by the `EventEncoder` for transmitting events. Each event is prefixed with `data:`, followed by its JSON-serialized representation, and terminated by two newline characters (`\n\n`) to signify the end of an event, allowing clients to process a continuous stream.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/encoder/overview.mdx#_snippet_3
+
+LANGUAGE: text
+CODE:
+```
+data: {json-serialized event}\n\n
+```
+
+----------------------------------------
+
+TITLE: Installing ag-ui-protocol SDK (Bash)
+DESCRIPTION: This snippet demonstrates how to install the `ag-ui-protocol` SDK using pip, the Python package installer. It's the first step to set up the development environment for interacting with agent systems.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/overview.mdx#_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+pip install ag-ui-protocol
+```
+
+----------------------------------------
+
+TITLE: Installing @ag-ui/client Package (Bash)
+DESCRIPTION: This command installs the @ag-ui/client package using npm, the standard package manager for Node.js. It is the first step required to use the Agent User Interaction Protocol Client SDK in your project.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/overview.mdx#_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+npm install @ag-ui/client
+```
+
+----------------------------------------
+
+TITLE: Installing Node.js Project Dependencies
+DESCRIPTION: These `npm` commands install the necessary runtime dependencies for the Node.js project, including `express` for the web server, `openai` for API integration, `@ag-ui/core` and `@ag-ui/encoder` for AG-UI event handling, and `uuid` for generating unique IDs. It also installs the TypeScript type definitions for `uuid` as a dev dependency.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_11
+
+LANGUAGE: bash
+CODE:
+```
+npm install express openai @ag-ui/core @ag-ui/encoder uuid
+npm install @types/uuid --save-dev
+```
+
+----------------------------------------
+
+TITLE: Installing ag-ui-protocol Package (Bash)
+DESCRIPTION: This command installs the `ag-ui-protocol` Python package using pip, making the necessary modules and classes, such as `EventEncoder`, available for use in your Python environment.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/encoder/overview.mdx#_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+pip install ag-ui-protocol
+```
+
+----------------------------------------
+
+TITLE: Running the FastAPI Server with Uvicorn (Bash)
+DESCRIPTION: This command starts the FastAPI application using Uvicorn, allowing it to serve HTTP requests. The `--reload` flag enables automatic server restarts upon code changes, facilitating development.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_3
+
+LANGUAGE: bash
+CODE:
+```
+poetry run uvicorn my_endpoint.main:app --reload
+```
+
+----------------------------------------
+
+TITLE: Accessing and Subscribing to Agent State Updates (TypeScript)
+DESCRIPTION: This code shows how to access the current state of an agent via agent.state and how to subscribe to the agent's event stream to detect state updates (STATE_DELTA events). The agent state persists across interactions and can store various application or user-specific data. It requires an agent instance and the EventType enum.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+```
+// Accessing agent state
+console.log(agent.state.preferences)
+
+// State is automatically updated during agent runs
+agent.runAgent().subscribe((event) => {
+  if (event.type === EventType.STATE_DELTA) {
+    // State has been updated
+    console.log("New state:", agent.state)
+  }
+})
+```
+
+----------------------------------------
+
+TITLE: Accessing and Modifying Agent Message History (TypeScript)
+DESCRIPTION: This snippet illustrates how to access the agent's message history array (agent.messages) and how to add a new message to this history. The message history maintains the conversation context, which is used by the agent for generating responses. It requires an agent instance.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_6
+
+LANGUAGE: typescript
+CODE:
+```
+// Accessing message history
+console.log(agent.messages)
+
+// Adding a new user message
+agent.messages.push({
+  id: "msg_123",
+  role: "user",
+  content: "Can you explain that in more detail?"
+})
+```
+
+----------------------------------------
+
+TITLE: Running the Demo Viewer Locally
+DESCRIPTION: This snippet provides the commands to set up and run the CopilotKit Demo Viewer locally for development. It first installs project dependencies using pnpm, then starts the development server, making the application accessible via a local URL.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/typescript-sdk/apps/dojo/README.md#_snippet_0
+
+LANGUAGE: Bash
+CODE:
+```
+pnpm install
+pnpm run dev
+```
+
+----------------------------------------
+
+TITLE: Defining User Confirmation Tool Schema (TypeScript)
+DESCRIPTION: Provides the schema definition for a confirmAction tool. It specifies the tool's name, description, and parameters, including an action string (required) and an optional importance enum. This schema is used by the AI agent to understand how to call the tool.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_7
+
+LANGUAGE: TypeScript
+CODE:
+```
+{
+  name: "confirmAction",
+  description: "Ask the user to confirm an action",
+  parameters: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        description: "The action to confirm"
+      },
+      importance: {
+        type: "string",
+        enum: ["low", "medium", "high", "critical"],
+        description: "The importance level"
+      }
+    },
+    required: ["action"]
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Assistant Message Structure in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for messages sent from the AI assistant to the user. It includes the base fields, sets the role to "assistant", and allows for optional text `content` or optional `toolCalls` if the assistant is invoking tools. An optional `name` can identify the assistant.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+interface AssistantMessage {
+  id: string
+  role: "assistant"
+  content?: string // Text response from the assistant (optional if using tool calls)
+  name?: string // Optional assistant identifier
+  toolCalls?: ToolCall[] // Optional tool calls made by the assistant
+}
+```
+
+----------------------------------------
+
+TITLE: Installing Dependencies and Running Dojo - Bash
+DESCRIPTION: These commands first install all project dependencies using pnpm, then compile the project and start the Dojo development server using Turbo. This allows you to run and test your AG-UI integrations locally.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_10
+
+LANGUAGE: bash
+CODE:
+```
+# Install dependencies
+pnpm install
+
+# Compile the project and run the dojo
+turbo run dev
+```
+
+----------------------------------------
+
+TITLE: Defining and Passing Frontend Tools to Agent (TypeScript)
+DESCRIPTION: Illustrates how to define a tool object in the frontend, including its name, description, and JSON Schema parameters, and then pass it as an array to the agent's execution method.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+// Define tools in the frontend
+const userConfirmationTool = {
+  name: "confirmAction",
+  description: "Ask the user to confirm a specific action before proceeding",
+  parameters: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        description: "The action that needs user confirmation",
+      },
+      importance: {
+        type: "string",
+        enum: ["low", "medium", "high", "critical"],
+        description: "The importance level of the action",
+      },
+    },
+    required: ["action"],
+  },
+}
+
+// Pass tools to the agent during execution
+agent.runAgent({
+  tools: [userConfirmationTool],
+  // Other parameters...
+})
+```
+
+----------------------------------------
+
+TITLE: Setting OpenAI API Key and Running AG-UI Server in Bash
+DESCRIPTION: These Bash commands demonstrate how to set the `OPENAI_API_KEY` environment variable, which is required for the OpenAI client in the server to authenticate. Following that, `npx ts-node src/server.ts` executes the TypeScript server file, starting the AG-UI compatible chat agent on `http://localhost:8000`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_19
+
+LANGUAGE: bash
+CODE:
+```
+export OPENAI_API_KEY=your-api-key
+npx ts-node src/server.ts
+```
+
+----------------------------------------
+
+TITLE: Creating a New Project with Poetry (Bash)
+DESCRIPTION: This command initializes a new Python project named 'my-endpoint' using Poetry, specifying Python version compatibility, and then navigates into the newly created project directory.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+poetry new my-endpoint --python=">=3.12,<4.0" && cd my-endpoint
+```
+
+----------------------------------------
+
+TITLE: Apply State Delta Patch (TypeScript)
+DESCRIPTION: Code snippet showing how `STATE_DELTA` events are processed in the AG-UI implementation. It uses the `fast-json-patch` library to apply the delta operations to the current state, ensuring immutability and error handling.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+case EventType.STATE_DELTA: {
+  const { delta } = event as StateDeltaEvent;
+
+  try {
+    // Apply the JSON Patch operations to the current state without mutating the original
+    const result = applyPatch(state, delta, true, false);
+    state = result.newDocument;
+    return emitUpdate({ state });
+  } catch (error: unknown) {
+    console.warn(
+      `Failed to apply state patch:\n` +
+      `Current state: ${JSON.stringify(state, null, 2)}\n` +
+      `Patch operations: ${JSON.stringify(delta, null, 2)}\n` +
+      `Error: ${errorMessage}`
+    );
+    return emitNoUpdate();
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Base Message Structure in AG-UI (TypeScript)
+DESCRIPTION: Defines the fundamental structure for all messages in the AG-UI protocol. It includes a unique identifier, the sender's role, optional text content, and an optional sender name. This interface serves as the base for specific message types.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+interface BaseMessage {
+  id: string // Unique identifier for the message
+  role: string // The role of the sender (user, assistant, system, tool)
+  content?: string // Optional text content of the message
+  name?: string // Optional name of the sender
+}
+```
+
+----------------------------------------
+
+TITLE: Define JSON Patch Operation Interface (TypeScript)
+DESCRIPTION: Defines the structure for a single JSON Patch operation according to RFC 6902. It includes the operation type (`op`), the target path (`path`), and optional fields like `value` or `from` depending on the operation.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+interface JsonPatchOperation {
+  op: "add" | "remove" | "replace" | "move" | "copy" | "test"
+  path: string // JSON Pointer (RFC 6901) to the target location
+  value?: any // The value to apply (for add, replace)
+  from?: string // Source path (for move, copy)
+}
+```
+
+----------------------------------------
+
+TITLE: Frontend State Synchronization with useCoAgent (JSX)
+DESCRIPTION: Demonstrates how a React frontend application uses the `useCoAgent` hook from CopilotKit to connect to and manage the agent's shared state in real-time.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_9
+
+LANGUAGE: JSX
+CODE:
+```
+// In the frontend React application
+const { state: agentState, setState: setAgentState } = useCoAgent({
+  name: "agent",
+  initialState: { someProperty: "initialValue" },
+})
+```
+
+----------------------------------------
+
+TITLE: Defining Message Union Type (Python)
+DESCRIPTION: Defines the `Message` type as a union of all possible message types in the system (`DeveloperMessage`, `SystemMessage`, `AssistantMessage`, `UserMessage`, `ToolMessage`). It uses `Annotated` and `Field` with a discriminator on the "role" field for type checking and parsing. Requires importing `Message` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_7
+
+LANGUAGE: python
+CODE:
+```
+Message = Annotated[
+    Union[DeveloperMessage, SystemMessage, AssistantMessage, UserMessage, ToolMessage],
+    Field(discriminator="role")
+]
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCallArgsEvent Interface in TypeScript
+DESCRIPTION: Defines the interface for an event streaming arguments for a tool call, including the event type, tool call ID, and a delta string containing a JSON fragment to append to the arguments.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_15
+
+LANGUAGE: typescript
+CODE:
+```
+interface ToolCallArgsEvent {
+  type: EventType.TOOL_CALL_ARGS
+  toolCallId: string
+  delta: string // JSON fragment to append to arguments
+}
+```
+
+----------------------------------------
+
+TITLE: Defining AG-UI Tool Structure (TypeScript)
+DESCRIPTION: Defines the standard interface for AG-UI tools, specifying required properties like name, description, and parameters using JSON Schema to structure arguments.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+interface Tool {
+  name: string // Unique identifier for the tool
+  description: string // Human-readable explanation of what the tool does
+  parameters: {
+    // JSON Schema defining the tool's parameters
+    type: "object"
+    properties: {
+      // Tool-specific parameters
+    }
+    required: string[] // Array of required parameter names
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Extending AgentConfig and Subclassing AbstractAgent (TypeScript)
+DESCRIPTION: Demonstrates how to extend the `AgentConfig` interface with custom options and how to create a subclass of `AbstractAgent` that accepts the extended configuration in its constructor.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+interface MyAgentConfig extends AgentConfig {
+  myConfigOption: string
+}
+
+class MyAgent extends AbstractAgent {
+  private myConfigOption: string
+
+  constructor(config: MyAgentConfig) {
+    super(config)
+    this.myConfigOption = config.myConfigOption
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Testing the AG-UI Endpoint with cURL (Bash)
+DESCRIPTION: This cURL command sends a POST request to the locally running FastAPI endpoint at `http://localhost:8000/awp`. It's used to verify that the server is active and responding correctly.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_4
+
+LANGUAGE: bash
+CODE:
+```
+curl -X POST http://localhost:8000/awp
+```
+
+----------------------------------------
+
+TITLE: Defining Message Union Type (TypeScript)
+DESCRIPTION: Defines a union type `Message` that can represent various types of messages within the system, including developer, system, assistant, user, and tool messages.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+type Message =
+  | DeveloperMessage
+  | SystemMessage
+  | AssistantMessage
+  | UserMessage
+  | ToolMessage
+```
+
+----------------------------------------
+
+TITLE: Defining Messages Snapshot Event in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for the `MESSAGES_SNAPSHOT` event, used to provide a complete state of the conversation messages. It includes the event `type` and a `messages` array containing all current `Message` objects. This is used for initialization or synchronization.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+interface MessagesSnapshotEvent {
+  type: EventType.MESSAGES_SNAPSHOT
+  messages: Message[] // Complete array of all messages
+}
+```
+
+----------------------------------------
+
+TITLE: Representing Tool Result Message (TypeScript)
+DESCRIPTION: Illustrates the structure of a message object sent back to the agent containing the result of a tool execution, including the result content as a string and a reference to the original tool call ID.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  id: "result-789",
+  role: "tool",
+  content: "true", // Tool result as a string
+  toolCallId: "tool-123" // References the original tool call
+}
+```
+
+----------------------------------------
+
+TITLE: Initializing and Encoding an Event with EventEncoder (Python)
+DESCRIPTION: This Python snippet demonstrates how to initialize the `EventEncoder` class and use its `encode` method to convert a `BaseEvent` object into a string representation. It imports `BaseEvent` from `ag_ui.core` and `EventEncoder` from `ag_ui.encoder` to set up the encoding process.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/encoder/overview.mdx#_snippet_1
+
+LANGUAGE: python
+CODE:
+```
+from ag_ui.core import BaseEvent
+from ag_ui.encoder import EventEncoder
+
+# Initialize the encoder
+encoder = EventEncoder()
+
+# Encode an event
+encoded_event = encoder.encode(event)
+```
+
+----------------------------------------
+
+TITLE: run Protected Abstract Method Signature (TypeScript)
+DESCRIPTION: Signature for the protected abstract `run` method, which must be implemented by subclasses to define the core agent execution logic. It takes `RunAgentInput` and returns `RunAgent`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+protected abstract run(input: RunAgentInput): RunAgent
+```
+
+----------------------------------------
+
+TITLE: Example: Encoding a TextMessageContentEvent (Python)
+DESCRIPTION: This example demonstrates the complete process of creating a `TextMessageContentEvent` and encoding it using the `EventEncoder`. It shows how to instantiate the event with specific `type`, `message_id`, and `delta` parameters, then encode it to produce an SSE-formatted string output suitable for client consumption.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/encoder/overview.mdx#_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+from ag_ui.core import TextMessageContentEvent, EventType
+from ag_ui.encoder import EventEncoder
+
+# Create an event
+event = TextMessageContentEvent(
+    type=EventType.TEXT_MESSAGE_CONTENT,
+    message_id="msg_123",
+    delta="Hello, world!"
+)
+
+# Initialize the encoder
+encoder = EventEncoder()
+
+# Encode the event
+encoded_event = encoder.encode(event)
+print(encoded_event)
+# Output: data: {"type":"TEXT_MESSAGE_CONTENT","messageId":"msg_123","delta":"Hello, world!"}\n\n
+```
+
+----------------------------------------
+
+TITLE: runAgent Method Signature (TypeScript)
+DESCRIPTION: Signature for the primary method `runAgent`, which executes the agent and returns an observable stream of `RuntimeProtocolEvent`. It accepts optional `RunAgentParameters` to configure the execution.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+runAgent(parameters?: RunAgentParameters): Observable<RuntimeProtocolEvent>
+```
+
+----------------------------------------
+
+TITLE: Initializing HttpAgent in TypeScript
+DESCRIPTION: Demonstrates how to create an instance of the `HttpAgent` class, configuring it with a URL and optional headers to connect to a remote agent endpoint.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+import { HttpAgent } from "@ag-ui/client"
+
+const agent = new HttpAgent({
+  url: "https://your-agent-endpoint.com/agent",
+  headers: {
+    Authorization: "Bearer your-api-key",
+  },
+})
+```
+
+----------------------------------------
+
+TITLE: Installing Turbo - Bash
+DESCRIPTION: This command installs Turbo using npm. Turbo is a high-performance build system for JavaScript and TypeScript monorepos, optimizing build times and improving developer experience.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_2
+
+LANGUAGE: bash
+CODE:
+```
+npm i turbo
+```
+
+----------------------------------------
+
+TITLE: Defining AgentConfig Interface (TypeScript)
+DESCRIPTION: Defines the basic configuration interface for an agent, including optional properties like `agentId`, `description`, `threadId`, `initialMessages`, and `initialState`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+interface AgentConfig {
+  agentId?: string // The identifier of the agent
+  description?: string // A description of the agent, used by the LLM
+  threadId?: string // The conversation thread identifier
+  initialMessages?: Message[] // An array of initial messages
+  initialState?: State // The initial state of the agent
+}
+```
+
+----------------------------------------
+
+TITLE: HttpAgent runAgent Method Signature
+DESCRIPTION: Signature for the public `runAgent` method, which initiates the agent execution. It accepts optional configuration parameters and returns an observable stream of runtime protocol events.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+runAgent(parameters?: RunHttpAgentConfig): Observable<RuntimeProtocolEvent>
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCall Interface in TypeScript
+DESCRIPTION: Defines the structure for a tool call object embedded within an assistant message, including a unique ID, type, and function details with name and JSON-encoded arguments.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_11
+
+LANGUAGE: typescript
+CODE:
+```
+interface ToolCall {
+  id: string // Unique ID for this tool call
+  type: "function" // Type of tool call
+  function: {
+    name: string // Name of the function to call
+    arguments: string // JSON-encoded string of arguments
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Testing Node.js Endpoint with Curl
+DESCRIPTION: This `curl` command sends a POST request to the locally running Express endpoint at `http://localhost:8000/awp`. It's used to verify that the server is active and correctly responding to requests.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_14
+
+LANGUAGE: bash
+CODE:
+```
+curl -X POST http://localhost:8000/awp
+```
+
+----------------------------------------
+
+TITLE: Installing pnpm - Bash
+DESCRIPTION: This command installs pnpm, a fast, disk-space efficient package manager, by downloading and executing its installation script. pnpm is used for managing project dependencies efficiently.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_3
+
+LANGUAGE: bash
+CODE:
+```
+curl -fsSL https://get.pnpm.io/install.sh | sh -
+```
+
+----------------------------------------
+
+TITLE: Defining UI Navigation Tool Schema (TypeScript)
+DESCRIPTION: Provides the schema definition for a navigateTo tool. It specifies the tool's name, description, and parameters, including a required destination string and optional params object. This schema allows the agent to request navigation within the application UI.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_9
+
+LANGUAGE: TypeScript
+CODE:
+```
+{
+  name: "navigateTo",
+  description: "Navigate to a different page or view",
+  parameters: {
+    type: "object",
+    properties: {
+      destination: {
+        type: "string",
+        description: "Destination page or view"
+      },
+      params: {
+        type: "object",
+        description: "Optional parameters for the navigation"
+      }
+    },
+    required: ["destination"]
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCall Type (TypeScript)
+DESCRIPTION: Defines the `ToolCall` type, representing a call to a tool made by an agent. It includes an ID, type (always "function"), and details about the function being called.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+```
+type ToolCall = {
+  id: string
+  type: "function"
+  function: FunctionCall
+}
+```
+
+----------------------------------------
+
+TITLE: Running Node.js Express Server
+DESCRIPTION: This command starts the TypeScript Express server using `ts-node`. `ts-node` allows direct execution of TypeScript files without prior compilation, which is convenient for development and testing.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_13
+
+LANGUAGE: bash
+CODE:
+```
+npx ts-node src/server.ts
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCall Class (Python)
+DESCRIPTION: Defines the `ToolCall` class, a Pydantic model representing a call made by an agent to a tool. It includes fields for a unique ID, the fixed "function" type, and a nested `FunctionCall` object detailing the specific function and arguments. Requires importing `ToolCall` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_8
+
+LANGUAGE: python
+CODE:
+```
+class ToolCall(ConfiguredBaseModel):
+    id: str
+    type: Literal["function"]
+    function: FunctionCall
+```
+
+----------------------------------------
+
+TITLE: Creating an HttpAgent Instance
+DESCRIPTION: Demonstrates how to instantiate an `HttpAgent` with a specific endpoint URL and include optional HTTP headers for authentication or other purposes.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+const agent = new HttpAgent({
+  url: "https://api.example.com/v1/agent",
+  headers: {
+    Authorization: "Bearer your-api-key",
+  },
+})
+```
+
+----------------------------------------
+
+TITLE: Setting OpenAI API Key and Running Python Server
+DESCRIPTION: This bash command sets the OpenAI API key as an environment variable, which is required for the FastAPI application to authenticate with OpenAI. It then uses `poetry` and `uvicorn` to run the FastAPI application, enabling auto-reloading for development.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_9
+
+LANGUAGE: bash
+CODE:
+```
+export OPENAI_API_KEY=your-api-key
+poetry run uvicorn my_endpoint.main:app --reload
+```
+
+----------------------------------------
+
+TITLE: Streaming Tool Call Arguments (TypeScript)
+DESCRIPTION: Demonstrates how tool arguments are streamed incrementally via multiple TOOL_CALL_ARGS events, each containing a 'delta' fragment of the JSON arguments that the frontend accumulates.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  type: EventType.TOOL_CALL_ARGS,
+  toolCallId: "tool-123",
+  delta: '{"act'
+}
+{
+  type: EventType.TOOL_CALL_ARGS,
+  toolCallId: "tool-123",
+  delta: 'ion":"Depl'
+}
+{
+  type: EventType.TOOL_CALL_ARGS,
+  toolCallId: "tool-123",
+  delta: 'oy the application to production"}'
+}
+```
+
+----------------------------------------
+
+TITLE: Defining StateDeltaEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `StateDeltaEvent`, providing a partial update to an agent's state. It includes a `delta` property which is an array of JSON Patch operations (RFC 6902).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_14
+
+LANGUAGE: typescript
+CODE:
+```
+type StateDeltaEvent = BaseEvent & {
+  type: EventType.STATE_DELTA
+  delta: any[] // JSON Patch operations (RFC 6902)
+}
+```
+
+----------------------------------------
+
+TITLE: Cloning AG-UI Repository - Bash
+DESCRIPTION: This sequence of commands clones the AG-UI GitHub repository and then navigates into the `typescript-sdk` directory. This is the starting point for developing AG-UI integrations using TypeScript.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_4
+
+LANGUAGE: bash
+CODE:
+```
+git clone git@github.com:ag-ui-protocol/ag-ui.git
+cd ag-ui/typescript-sdk
+```
+
+----------------------------------------
+
+TITLE: Defining Context Type (TypeScript)
+DESCRIPTION: Defines the `Context` type, used to represent a piece of contextual information provided to an agent. It includes a description and the actual value of the context.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_10
+
+LANGUAGE: typescript
+CODE:
+```
+type Context = {
+  description: string
+  value: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Data Retrieval Tool Schema (TypeScript)
+DESCRIPTION: Provides the schema definition for a fetchUserData tool. It specifies the tool's name, description, and parameters, including a required userId string and an optional fields array of strings. This schema guides the agent on how to request user data.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_8
+
+LANGUAGE: TypeScript
+CODE:
+```
+{
+  name: "fetchUserData",
+  description: "Retrieve data about a specific user",
+  parameters: {
+    type: "object",
+    properties: {
+      userId: {
+        type: "string",
+        description: "ID of the user"
+      },
+      fields: {
+        type: "array",
+        items: {
+          type: "string"
+        },
+        description: "Fields to retrieve"
+      }
+    },
+    required: ["userId"]
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: MessagesSnapshotEvent - Python
+DESCRIPTION: Provides a snapshot of all messages in a conversation.
+
+Import: `from ag_ui.core import MessagesSnapshotEvent`
+
+Properties:
+- `messages` (List[Message]): Array of message objects
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_15
+
+LANGUAGE: python
+CODE:
+```
+class MessagesSnapshotEvent(BaseEvent):
+    type: Literal[EventType.MESSAGES_SNAPSHOT]
+    messages: List[Message]
+```
+
+----------------------------------------
+
+TITLE: abortRun Method Signature (TypeScript)
+DESCRIPTION: Signature for the `abortRun` method, which cancels the currently executing agent run. It takes no parameters and returns void.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+```
+abortRun(): void
+```
+
+----------------------------------------
+
+TITLE: JSON Patch Add Operation Example (JSON)
+DESCRIPTION: Example demonstrating the JSON Patch `add` operation. This operation adds a new value to an object or inserts an element into an array at the specified path.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_3
+
+LANGUAGE: json
+CODE:
+```
+{ "op": "add", "path": "/user/preferences", "value": { "theme": "dark" } }
+```
+
+----------------------------------------
+
+TITLE: Accessing Agent State and Cloning - TypeScript
+DESCRIPTION: This snippet illustrates how to access the current state and message history stored within an agent instance using the `.state` and `.messages` properties. It also demonstrates how to create a deep copy of the agent, including its current state and messages, using the `.clone()` method.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+```
+// Access current state
+console.log(agent.state)
+
+// Access messages
+console.log(agent.messages)
+
+// Clone an agent with its state
+const clonedAgent = agent.clone()
+```
+
+----------------------------------------
+
+TITLE: onError and onFinalize Protected Methods (TypeScript)
+DESCRIPTION: Signatures for the protected lifecycle hook methods `onError` (for handling errors) and `onFinalize` (for cleanup), which can be overridden by subclasses to add custom logic.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_10
+
+LANGUAGE: typescript
+CODE:
+```
+protected onError(error: Error): void
+protected onFinalize(): void
+```
+
+----------------------------------------
+
+TITLE: Configuring an HttpAgent Instance - TypeScript
+DESCRIPTION: This section defines the AgentConfig interface, outlining the available configuration options for an agent instance, including unique identifiers, description, thread ID, initial messages, and initial state. It then shows how to pass an object conforming to this interface to the HttpAgent constructor.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/agents.mdx#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+```
+interface AgentConfig {
+  agentId?: string // Unique identifier for the agent
+  description?: string // Human-readable description
+  threadId?: string // Conversation thread identifier
+  initialMessages?: Message[] // Initial messages
+  initialState?: State // Initial state object
+}
+```
+
+LANGUAGE: typescript
+CODE:
+```
+// Using the configuration
+const agent = new HttpAgent({
+  agentId: "my-agent-123",
+  description: "A helpful assistant",
+  threadId: "thread-456",
+  initialMessages: [
+    { id: "1", role: "system", content: "You are a helpful assistant." },
+  ],
+  initialState: { preferredLanguage: "English" },
+})
+```
+
+----------------------------------------
+
+TITLE: Copying Middleware Starter Template - Bash
+DESCRIPTION: This command copies the `middleware-starter` template directory to a new `openai` directory within the `integrations` folder. This creates a new project structure for developing the OpenAI integration.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_5
+
+LANGUAGE: bash
+CODE:
+```
+cp -r integrations/middleware-starter integrations/openai
+```
+
+----------------------------------------
+
+TITLE: Defining System Message Structure in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for messages providing instructions or context to the AI agent. It includes the base fields, sets the role to "system", and requires the `content` field for the system instructions or context. An optional `name` can be included.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+interface SystemMessage {
+  id: string
+  role: "system"
+  content: string // Instructions or context for the agent
+  name?: string // Optional identifier
+}
+```
+
+----------------------------------------
+
+TITLE: Installing Project Dependencies with Poetry (Bash)
+DESCRIPTION: This command uses Poetry to add required packages (ag-ui-protocol, openai, fastapi, uvicorn) to the project's dependencies, managing their installation and versioning.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_1
+
+LANGUAGE: bash
+CODE:
+```
+poetry add ag-ui-protocol openai fastapi uvicorn
+```
+
+----------------------------------------
+
+TITLE: Defining User Message Structure in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for messages sent from the end user to the AI agent. It extends the base message structure, specifically setting the role to "user" and requiring the `content` field for the user's text input. An optional `name` can identify the user.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+interface UserMessage {
+  id: string
+  role: "user"
+  content: string // Text input from the user
+  name?: string // Optional user identifier
+}
+```
+
+----------------------------------------
+
+TITLE: EventType Enum
+DESCRIPTION: The `EventType` enum defines all possible event types in the system:
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_0
+
+LANGUAGE: TypeScript
+CODE:
+```
+enum EventType {
+  TEXT_MESSAGE_START = "TEXT_MESSAGE_START",
+  TEXT_MESSAGE_CONTENT = "TEXT_MESSAGE_CONTENT",
+  TEXT_MESSAGE_END = "TEXT_MESSAGE_END",
+  TOOL_CALL_START = "TOOL_CALL_START",
+  TOOL_CALL_ARGS = "TOOL_CALL_ARGS",
+  TOOL_CALL_END = "TOOL_CALL_END",
+  STATE_SNAPSHOT = "STATE_SNAPSHOT",
+  STATE_DELTA = "STATE_DELTA",
+  MESSAGES_SNAPSHOT = "MESSAGES_SNAPSHOT",
+  RAW = "RAW",
+  CUSTOM = "CUSTOM",
+  RUN_STARTED = "RUN_STARTED",
+  RUN_FINISHED = "RUN_FINISHED",
+  RUN_ERROR = "RUN_ERROR",
+  STEP_STARTED = "STEP_STARTED",
+  STEP_FINISHED = "STEP_FINISHED"
+}
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCallEndEvent Interface in TypeScript
+DESCRIPTION: Defines the interface for an event signaling the end of a streamed tool call, including the event type and the tool call ID.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_16
+
+LANGUAGE: typescript
+CODE:
+```
+interface ToolCallEndEvent {
+  type: EventType.TOOL_CALL_END
+  toolCallId: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining FunctionCall Class (Python)
+DESCRIPTION: Defines the `FunctionCall` class, a Pydantic model representing the details of a function call within a `ToolCall`. It includes the `name` of the function to be called and the `arguments` as a JSON-encoded string. Requires importing `FunctionCall` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_9
+
+LANGUAGE: python
+CODE:
+```
+class FunctionCall(ConfiguredBaseModel):
+    name: str
+    arguments: str
+```
+
+----------------------------------------
+
+TITLE: Defining FunctionCall Type (TypeScript)
+DESCRIPTION: Defines the `FunctionCall` type, which specifies the name of the function to be called and its arguments as a JSON-encoded string within a `ToolCall`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+```
+type FunctionCall = {
+  name: string
+  arguments: string
+}
+```
+
+----------------------------------------
+
+TITLE: Setting Up New Node.js Project with TypeScript
+DESCRIPTION: These commands initialize a new Node.js project, create a directory, set up npm, install TypeScript and its type definitions for Node.js and Express as development dependencies, and finally initialize the TypeScript configuration file (`tsconfig.json`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_10
+
+LANGUAGE: bash
+CODE:
+```
+mkdir awp-endpoint && cd awp-endpoint
+npm init -y
+npm install typescript ts-node @types/node @types/express --save-dev
+npx tsc --init
+```
+
+----------------------------------------
+
+TITLE: Creating Basic Express Endpoint for AG-UI
+DESCRIPTION: This TypeScript snippet demonstrates how to set up a basic Express server. It configures the server to parse JSON request bodies and defines a POST endpoint at `/awp` that responds with a simple 'Hello World' JSON message, serving as a starting point for an AG-UI endpoint.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_12
+
+LANGUAGE: typescript
+CODE:
+```
+import express from "express"
+import { Request, Response } from "express"
+
+const app = express()
+
+app.use(express.json())
+
+app.post("/awp", (req: Request, res: Response) => {
+  res.json({ message: "Hello World" })
+})
+
+app.listen(8000, () => {
+  console.log("Server running on http://localhost:8000")
+})
+```
+
+----------------------------------------
+
+TITLE: Defining the BaseEvent Interface (TypeScript)
+DESCRIPTION: Defines the fundamental structure for all events within the AG-UI framework. It specifies the required 'type' property and includes optional fields for a timestamp and the raw underlying event data.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/architecture.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+interface BaseEvent {
+  type: EventType
+  timestamp?: number
+  rawEvent?: any
+}
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCallEndEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `ToolCallEndEvent`, signaling the end of a tool call. It includes the `toolCallId` to match the corresponding start event.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_12
+
+LANGUAGE: typescript
+CODE:
+```
+type ToolCallEndEvent = BaseEvent & {
+  type: EventType.TOOL_CALL_END
+  toolCallId: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCallStartEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `ToolCallStartEvent`, signaling the start of a tool call. It includes a unique `toolCallId`, the `toolCallName`, and an optional `parentMessageId`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_10
+
+LANGUAGE: typescript
+CODE:
+```
+type ToolCallStartEvent = BaseEvent & {
+  type: EventType.TOOL_CALL_START
+  toolCallId: string
+  toolCallName: string
+  parentMessageId?: string
+}
+```
+
+----------------------------------------
+
+TITLE: ToolCallEndEvent - Python
+DESCRIPTION: Signals the end of a tool call.
+
+Import: `from ag_ui.core import ToolCallEndEvent`
+
+Properties:
+- `tool_call_id` (str): Matches the ID from ToolCallStartEvent
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_12
+
+LANGUAGE: python
+CODE:
+```
+class ToolCallEndEvent(BaseEvent):
+    type: Literal[EventType.TOOL_CALL_END]
+    tool_call_id: str
+```
+
+----------------------------------------
+
+TITLE: Installing OpenAI SDK - Bash
+DESCRIPTION: These commands navigate into the OpenAI integration directory and then install the official OpenAI SDK using pnpm. This SDK is a crucial dependency for interacting with the OpenAI API from your AG-UI agent.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_12
+
+LANGUAGE: bash
+CODE:
+```
+cd integrations/openai
+pnpm install openai
+```
+
+----------------------------------------
+
+TITLE: Defining Tool Type (TypeScript)
+DESCRIPTION: Defines the `Tool` type, specifying the structure for a tool that an agent can call. It includes the tool's name, description, and a JSON Schema defining its parameters.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_11
+
+LANGUAGE: typescript
+CODE:
+```
+type Tool = {
+  name: string
+  description: string
+  parameters: any // JSON Schema
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Tool Message Structure in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for messages containing the results of tool executions. It includes the base fields, sets the role to "tool", requires the `content` field for the tool's output, and includes `toolCallId` to link the result back to the specific tool invocation.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_4
+
+LANGUAGE: typescript
+CODE:
+```
+interface ToolMessage {
+  id: string
+  role: "tool"
+  content: string // Result from the tool execution
+  toolCallId: string // ID of the tool call this message responds to
+}
+```
+
+----------------------------------------
+
+TITLE: Defining RunAgentParameters Interface (TypeScript)
+DESCRIPTION: Defines the interface for parameters passed to the `runAgent` method, including optional properties for `runId` (unique execution ID), `tools` (available tools), `context` (contextual information), and `forwardedProps` (additional properties).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_4
+
+LANGUAGE: typescript
+CODE:
+```
+interface RunAgentParameters {
+  runId?: string // Unique ID for this execution run
+  tools?: Tool[] // Available tools for the agent
+  context?: Context[] // Contextual information
+  forwardedProps?: Record<string, any> // Additional properties to forward
+}
+```
+
+----------------------------------------
+
+TITLE: Define State Delta Event Interface (TypeScript)
+DESCRIPTION: Defines the structure for the `STATE_DELTA` event, which carries incremental state updates using an array of JSON Patch operations (RFC 6902). This method is bandwidth-efficient for frequent, small updates.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+interface StateDeltaEvent {
+  type: EventType.STATE_DELTA
+  delta: JsonPatchOperation[] // Array of JSON Patch operations
+}
+```
+
+----------------------------------------
+
+TITLE: Define Event Types in Python
+DESCRIPTION: This Python enum defines all possible event types used in the Agent User Interaction Protocol SDK, serving as a comprehensive list of communication signals between agents and the frontend.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_0
+
+LANGUAGE: python
+CODE:
+```
+class EventType(str, Enum):
+    TEXT_MESSAGE_START = "TEXT_MESSAGE_START"
+    TEXT_MESSAGE_CONTENT = "TEXT_MESSAGE_CONTENT"
+    TEXT_MESSAGE_END = "TEXT_MESSAGE_END"
+    TOOL_CALL_START = "TOOL_CALL_START"
+    TOOL_CALL_ARGS = "TOOL_CALL_ARGS"
+    TOOL_CALL_END = "TOOL_CALL_END"
+    STATE_SNAPSHOT = "STATE_SNAPSHOT"
+    STATE_DELTA = "STATE_DELTA"
+    MESSAGES_SNAPSHOT = "MESSAGES_SNAPSHOT"
+    RAW = "RAW"
+    CUSTOM = "CUSTOM"
+    RUN_STARTED = "RUN_STARTED"
+    RUN_FINISHED = "RUN_FINISHED"
+    RUN_ERROR = "RUN_ERROR"
+    STEP_STARTED = "STEP_STARTED"
+    STEP_FINISHED = "STEP_FINISHED"
+```
+
+----------------------------------------
+
+TITLE: BaseEvent
+DESCRIPTION: All events inherit from the `BaseEvent` type, which provides common properties shared across all event types.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_1
+
+LANGUAGE: TypeScript
+CODE:
+```
+type BaseEvent = {
+  type: EventType // Discriminator field
+  timestamp?: number
+  rawEvent?: any
+}
+```
+
+----------------------------------------
+
+TITLE: Defining SystemMessage Type (TypeScript)
+DESCRIPTION: Defines the structure for a system message. It includes a unique ID, the fixed "system" role, required text content, and an optional sender name.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_3
+
+LANGUAGE: typescript
+CODE:
+```
+type SystemMessage = {
+  id: string
+  role: "system"
+  content: string
+  name?: string
+}
+```
+
+----------------------------------------
+
+TITLE: Define Run Started Event in Python
+DESCRIPTION: This Python class represents an event signaling the beginning of an agent run. It inherits from `BaseEvent` and includes specific properties for the conversation thread ID (`thread_id`) and the agent run ID (`run_id`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_2
+
+LANGUAGE: python
+CODE:
+```
+class RunStartedEvent(BaseEvent):
+    type: Literal[EventType.RUN_STARTED]
+    thread_id: str
+    run_id: str
+```
+
+----------------------------------------
+
+TITLE: Defining Context Class (Python)
+DESCRIPTION: Defines the `Context` class, a Pydantic model representing a piece of contextual information provided to an agent. It includes a `description` of the context and the actual `value`. Requires importing `Context` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_10
+
+LANGUAGE: python
+CODE:
+```
+class Context(ConfiguredBaseModel):
+    description: str
+    value: str
+```
+
+----------------------------------------
+
+TITLE: Defining UserMessage Type (TypeScript)
+DESCRIPTION: Defines the structure for a message originating from a user. It includes a unique ID, the fixed "user" role, required text content, and an optional sender name.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+```
+type UserMessage = {
+  id: string
+  role: "user"
+  content: string
+  name?: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining UserMessage Class (Python)
+DESCRIPTION: Defines the `UserMessage` class, a Pydantic model representing a message sent by a user in the Agent UI Protocol. It inherits from `BaseMessage` and includes a fixed `role` of "user" and a required `content` string.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_5
+
+LANGUAGE: Python
+CODE:
+```
+class UserMessage(BaseMessage):
+    role: Literal["user"]
+    content: str
+```
+
+----------------------------------------
+
+TITLE: Example Tool Result Message in TypeScript
+DESCRIPTION: Illustrates the structure of a tool message, which represents the result of a tool execution. It includes the message ID, role, content (the result), and a reference to the original tool call ID.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_13
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  id: "result_789",
+  role: "tool",
+  content: "168",
+  toolCallId: "call_456" // References the original tool call
+}
+```
+
+----------------------------------------
+
+TITLE: Representing Tool Call Start Event (TypeScript)
+DESCRIPTION: Shows the structure of the event object emitted at the beginning of a tool call, including a unique ID for the call, the tool's name, and an optional reference to a parent message.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  type: EventType.TOOL_CALL_START,
+  toolCallId: "tool-123",
+  toolCallName: "confirmAction",
+  parentMessageId: "msg-456" // Optional reference to a message
+}
+```
+
+----------------------------------------
+
+TITLE: Define State Snapshot Event Interface (TypeScript)
+DESCRIPTION: Defines the structure for the `STATE_SNAPSHOT` event, which carries a complete representation of the agent's current state. This event is used for initial state establishment, resynchronization, or major state changes.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+interface StateSnapshotEvent {
+  type: EventType.STATE_SNAPSHOT
+  snapshot: any // Complete state object
+}
+```
+
+----------------------------------------
+
+TITLE: Defining CustomEvent Class in Python
+DESCRIPTION: This Python snippet defines the CustomEvent class, inheriting from BaseEvent. It is designed for creating application-specific custom events and includes fields for the event's type (fixed as CUSTOM), a string name, and an arbitrary value.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_17
+
+LANGUAGE: python
+CODE:
+```
+class CustomEvent(BaseEvent):
+    type: Literal[EventType.CUSTOM]
+    name: str
+    value: Any
+```
+
+----------------------------------------
+
+TITLE: Defining HttpAgentConfig Interface
+DESCRIPTION: Defines the configuration interface for `HttpAgent`, extending `AgentConfig` with mandatory `url` and optional `headers` properties.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+interface HttpAgentConfig extends AgentConfig {
+  url: string // Endpoint URL for the agent service
+  headers?: Record<string, string> // Optional HTTP headers
+}
+```
+
+----------------------------------------
+
+TITLE: Define Run Error Event in Python
+DESCRIPTION: This Python class represents an event signaling an error during an agent run. It inherits from `BaseEvent` and includes properties for the error message (`message`) and an optional error code (`code`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_4
+
+LANGUAGE: python
+CODE:
+```
+class RunErrorEvent(BaseEvent):
+    type: Literal[EventType.RUN_ERROR]
+    message: str
+    code: Optional[str] = None
+```
+
+----------------------------------------
+
+TITLE: Define Base Event Class in Python
+DESCRIPTION: This Python class serves as the base for all events in the SDK. It includes common properties like the event type (`type`), an optional timestamp (`timestamp`), and optional raw event data (`raw_event`). All specific event types inherit from this class.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_1
+
+LANGUAGE: python
+CODE:
+```
+class BaseEvent(ConfiguredBaseModel):
+    type: EventType
+    timestamp: Optional[int] = None
+    raw_event: Optional[Any] = None
+```
+
+----------------------------------------
+
+TITLE: Registering OpenAI Agent in Dojo Agents - TypeScript
+DESCRIPTION: This TypeScript snippet imports the `OpenAIAgent` and registers it within the `agentsIntegrations` array in `apps/dojo/src/agents.ts`. This makes the `OpenAIAgent` available for the Dojo to instantiate and use.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+```
+// ...
+import { OpenAIAgent } from "@ag-ui/openai"
+
+export const agentsIntegrations: AgentIntegrationConfig[] = [
+  // ...
+
+  {
+    id: "openai",
+    agents: async () => {
+      return {
+        agentic_chat: new OpenAIAgent()
+      }
+    }
+  }
+]
+```
+
+----------------------------------------
+
+TITLE: Defining AssistantMessage Class (Python)
+DESCRIPTION: Defines the `AssistantMessage` class, a Pydantic model representing a message sent by an assistant in the Agent UI Protocol. It inherits from `BaseMessage` and includes a fixed `role` of "assistant". It can optionally contain text `content` or a list of `tool_calls`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_4
+
+LANGUAGE: Python
+CODE:
+```
+class AssistantMessage(BaseMessage):
+    role: Literal["assistant"]
+    content: Optional[str] = None
+    tool_calls: Optional[List[ToolCall]] = None
+```
+
+----------------------------------------
+
+TITLE: Illustrating Text Message Streaming Flow - Mermaid
+DESCRIPTION: This Mermaid sequence diagram depicts the streaming pattern for text message events. It shows a TextMessageStart event initiating the message, followed by a loop of TextMessageContent events delivering incremental text chunks, and finally a TextMessageEnd event signaling message completion, enabling real-time display.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/events.mdx#_snippet_1
+
+LANGUAGE: mermaid
+CODE:
+```
+sequenceDiagram
+    participant Agent
+    participant Client
+
+    Note over Agent,Client: Message begins
+    Agent->>Client: TextMessageStart
+
+    loop Content streaming
+        Agent->>Client: TextMessageContent
+    end
+
+    Note over Agent,Client: Message completes
+    Agent->>Client: TextMessageEnd
+```
+
+----------------------------------------
+
+TITLE: Defining AssistantMessage Type (TypeScript)
+DESCRIPTION: Defines the structure for a message originating from an assistant. It includes a unique ID, the fixed "assistant" role, optional text content, an optional sender name, and an optional array of tool calls made by the assistant.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_4
+
+LANGUAGE: typescript
+CODE:
+```
+type AssistantMessage = {
+  id: string
+  role: "assistant"
+  content?: string
+  name?: string
+  toolCalls?: ToolCall[]
+}
+```
+
+----------------------------------------
+
+TITLE: ToolCallArgsEvent - Python
+DESCRIPTION: Represents a chunk of argument data for a tool call.
+
+Import: `from ag_ui.core import ToolCallArgsEvent`
+
+Properties:
+- `tool_call_id` (str): Matches the ID from ToolCallStartEvent
+- `delta` (str): Argument data chunk
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_11
+
+LANGUAGE: python
+CODE:
+```
+class ToolCallArgsEvent(BaseEvent):
+    type: Literal[EventType.TOOL_CALL_ARGS]
+    tool_call_id: str
+    delta: str
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCallArgsEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `ToolCallArgsEvent`, representing a chunk of argument data for a tool call. It includes the `toolCallId` and the `delta` string containing the argument data.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_11
+
+LANGUAGE: typescript
+CODE:
+```
+type ToolCallArgsEvent = BaseEvent & {
+  type: EventType.TOOL_CALL_ARGS
+  toolCallId: string
+  delta: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Message Role Type (Python)
+DESCRIPTION: Defines the `Role` type using Python's `Literal`, specifying the allowed string values for message sender roles within the Agent UI Protocol. The possible roles are "developer", "system", "assistant", "user", and "tool".
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_1
+
+LANGUAGE: Python
+CODE:
+```
+Role = Literal["developer", "system", "assistant", "user", "tool"]
+```
+
+----------------------------------------
+
+TITLE: Defining Message Role Type (TypeScript)
+DESCRIPTION: Defines a union type representing the possible roles a message sender can have within the protocol. The allowed roles are "developer", "system", "assistant", "user", and "tool".
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_1
+
+LANGUAGE: typescript
+CODE:
+```
+type Role = "developer" | "system" | "assistant" | "user" | "tool"
+```
+
+----------------------------------------
+
+TITLE: Defining ToolCallStartEvent Interface in TypeScript
+DESCRIPTION: Defines the interface for an event signaling the start of a streamed tool call, including the event type, tool call ID, tool call name, and an optional parent message ID.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_14
+
+LANGUAGE: typescript
+CODE:
+```
+interface ToolCallStartEvent {
+  type: EventType.TOOL_CALL_START
+  toolCallId: string
+  toolCallName: string
+  parentMessageId?: string // Optional link to parent message
+}
+```
+
+----------------------------------------
+
+TITLE: Defining Text Message End Event in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for the `TEXT_MESSAGE_END` event, signaling the completion of a streaming text message. It includes the event `type` and the `messageId` of the message that has finished streaming.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_10
+
+LANGUAGE: typescript
+CODE:
+```
+interface TextMessageEndEvent {
+  type: EventType.TEXT_MESSAGE_END
+  messageId: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining TextMessageEndEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `TextMessageEndEvent`, signaling the end of a text message. It includes a `messageId` property to match the corresponding start event.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+```
+type TextMessageEndEvent = BaseEvent & {
+  type: EventType.TEXT_MESSAGE_END
+  messageId: string
+}
+```
+
+----------------------------------------
+
+TITLE: Importing Core Components (Python)
+DESCRIPTION: This Python snippet shows a basic import statement for the `ag_ui.core` package. It signifies the starting point for accessing the foundational components, types, and events provided by the Agent User Interaction Protocol SDK.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/overview.mdx#_snippet_1
+
+LANGUAGE: python
+CODE:
+```
+from ag_ui.core import ...
+```
+
+----------------------------------------
+
+TITLE: Defining RunHttpAgentConfig Interface
+DESCRIPTION: Defines the configuration interface for the `runAgent` method, extending `RunAgentParameters` with an optional `abortController` for request cancellation.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_4
+
+LANGUAGE: typescript
+CODE:
+```
+interface RunHttpAgentConfig extends RunAgentParameters {
+  abortController?: AbortController // For canceling the HTTP request
+}
+```
+
+----------------------------------------
+
+TITLE: AG-UI Architecture Diagram
+DESCRIPTION: Visual representation of the AG-UI client-server architecture, showing the relationship between frontend applications, AG-UI clients, AI agents, and the secure proxy.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/architecture.mdx#_snippet_0
+
+LANGUAGE: mermaid
+CODE:
+```
+flowchart LR
+    subgraph "Frontend"
+        App["Application"]
+        Client["AG-UI Client"]
+    end
+
+    subgraph "Backend"
+        A1["AI Agent A"]
+        P["Secure Proxy"]
+        A2["AI Agent B"]
+        A3["AI Agent C"]
+    end
+
+    App <--> Client
+    Client <-->|"AG-UI Protocol"| A1
+    Client <-->|"AG-UI Protocol"| P
+    P <-->|"AG-UI Protocol"| A2
+    P <-->|"AG-UI Protocol"| A3
+
+    class P mintStyle;
+    classDef mintStyle fill:#E0F7E9,stroke:#66BB6A,stroke-width:2px,color:#000000;
+
+    style App rx:5, ry:5;
+    style Client rx:5, ry:5;
+    style A1 rx:5, ry:5;
+    style P rx:5, ry:5;
+    style A2 rx:5, ry:5;
+    style A3 rx:5, ry:5;
+```
+
+----------------------------------------
+
+TITLE: Defining Text Message Start Event in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for the `TEXT_MESSAGE_START` event, signaling the beginning of a new streaming text message. It includes the event `type`, the unique `messageId` for the new message, and the sender's `role`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+```
+interface TextMessageStartEvent {
+  type: EventType.TEXT_MESSAGE_START
+  messageId: string
+  role: string
+}
+```
+
+----------------------------------------
+
+TITLE: Representing Tool Call End Event (TypeScript)
+DESCRIPTION: Shows the structure of the event object emitted when an agent completes a tool call, referencing the unique ID of the call that has finished.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/tools.mdx#_snippet_4
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  type: EventType.TOOL_CALL_END,
+  toolCallId: "tool-123"
+}
+```
+
+----------------------------------------
+
+TITLE: Defining ToolMessage Type (TypeScript)
+DESCRIPTION: Defines the structure for a message originating from a tool. It includes a unique ID, the required text content from the tool's output, the fixed "tool" role, and the ID of the tool call that this message is responding to.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_6
+
+LANGUAGE: typescript
+CODE:
+```
+type ToolMessage = {
+  id: string
+  content: string
+  role: "tool"
+  toolCallId: string
+}
+```
+
+----------------------------------------
+
+TITLE: Example Agent Proposal State (JSON)
+DESCRIPTION: Illustrates a JSON structure representing an agent's proposed action within the shared state, which can be displayed and modified by the frontend.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_8
+
+LANGUAGE: JSON
+CODE:
+```
+{
+  "proposal": {
+    "action": "send_email",
+    "recipient": "client@example.com",
+    "content": "Draft email content..."
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Defining ToolMessage Class (Python)
+DESCRIPTION: Defines the `ToolMessage` class, a Pydantic model representing a message sent from a tool. It includes fields for a unique ID, the fixed "tool" role, the message content, and the ID of the tool call it responds to. Requires importing `ToolMessage` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_6
+
+LANGUAGE: python
+CODE:
+```
+class ToolMessage(ConfiguredBaseModel):
+    id: str
+    role: Literal["tool"]
+    content: str
+    tool_call_id: str
+```
+
+----------------------------------------
+
+TITLE: JSON Patch Remove Operation Example (JSON)
+DESCRIPTION: Example demonstrating the JSON Patch `remove` operation. This operation removes the value at the specified path.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_5
+
+LANGUAGE: json
+CODE:
+```
+{ "op": "remove", "path": "/temporary_data" }
+```
+
+----------------------------------------
+
+TITLE: Define Run Finished Event in Python
+DESCRIPTION: This Python class represents an event signaling the successful completion of an agent run. It inherits from `BaseEvent` and includes specific properties for the conversation thread ID (`thread_id`) and the agent run ID (`run_id`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_3
+
+LANGUAGE: python
+CODE:
+```
+class RunFinishedEvent(BaseEvent):
+    type: Literal[EventType.RUN_FINISHED]
+    thread_id: str
+    run_id: str
+```
+
+----------------------------------------
+
+TITLE: Defining Zod Event Schemas Union (Typescript)
+DESCRIPTION: Defines a Zod discriminated union `EventSchemas` that combines various specific event schemas. This union is used for runtime validation and TypeScript type inference of events in the SDK.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_18
+
+LANGUAGE: typescript
+CODE:
+```
+const EventSchemas = z.discriminatedUnion("type", [
+  TextMessageStartEventSchema,
+  TextMessageContentEventSchema,
+  TextMessageEndEventSchema,
+  ToolCallStartEventSchema,
+  ToolCallArgsEventSchema,
+  ToolCallEndEventSchema,
+  StateSnapshotEventSchema,
+  StateDeltaEventSchema,
+  MessagesSnapshotEventSchema,
+  RawEventSchema,
+  CustomEventSchema,
+  RunStartedEventSchema,
+  RunFinishedEventSchema,
+  RunErrorEventSchema,
+  StepStartedEventSchema,
+  StepFinishedEventSchema,
+])
+```
+
+----------------------------------------
+
+TITLE: StateDeltaEvent - Python
+DESCRIPTION: Provides a partial update to an agent's state using JSON Patch.
+
+Import: `from ag_ui.core import StateDeltaEvent`
+
+Properties:
+- `delta` (List[Any]): Array of JSON Patch operations
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_14
+
+LANGUAGE: python
+CODE:
+```
+class StateDeltaEvent(BaseEvent):
+    type: Literal[EventType.STATE_DELTA]
+    delta: List[Any]  # JSON Patch (RFC 6902)
+```
+
+----------------------------------------
+
+TITLE: StateSnapshotEvent - Python
+DESCRIPTION: Provides a complete snapshot of an agent's state.
+
+Import: `from ag_ui.core import StateSnapshotEvent`
+
+Properties:
+- `snapshot` (State): Complete state snapshot
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_13
+
+LANGUAGE: python
+CODE:
+```
+class StateSnapshotEvent(BaseEvent):
+    type: Literal[EventType.STATE_SNAPSHOT]
+    snapshot: State
+```
+
+----------------------------------------
+
+TITLE: Define Text Message Start Event in Python
+DESCRIPTION: This Python class represents an event signaling the beginning of a text message in a conversation. It inherits from `BaseEvent` and includes properties for a unique message identifier (`message_id`) and the role, which is always 'assistant' (`role`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_7
+
+LANGUAGE: python
+CODE:
+```
+class TextMessageStartEvent(BaseEvent):
+    type: Literal[EventType.TEXT_MESSAGE_START]
+    message_id: str
+    role: Literal["assistant"]
+```
+
+----------------------------------------
+
+TITLE: Defining RawEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `RawEvent`, used to pass through events from external systems. It includes the original `event` data and an optional `source` property.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_16
+
+LANGUAGE: typescript
+CODE:
+```
+type RawEvent = BaseEvent & {
+  type: EventType.RAW
+  event: any
+  source?: string
+}
+```
+
+----------------------------------------
+
+TITLE: ToolCallStartEvent - Python
+DESCRIPTION: Signals the start of a tool call.
+
+Import: `from ag_ui.core import ToolCallStartEvent`
+
+Properties:
+- `tool_call_id` (str): Unique identifier for the tool call
+- `tool_call_name` (str): Name of the tool being called
+- `parent_message_id` (Optional[str]): ID of the parent message
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_10
+
+LANGUAGE: python
+CODE:
+```
+class ToolCallStartEvent(BaseEvent):
+    type: Literal[EventType.TOOL_CALL_START]
+    tool_call_id: str
+    tool_call_name: str
+    parent_message_id: Optional[str] = None
+```
+
+----------------------------------------
+
+TITLE: TextMessageContentEvent - Python
+DESCRIPTION: Represents a chunk of content in a streaming text message.
+
+Import: `from ag_ui.core import TextMessageContentEvent`
+
+Properties:
+- `message_id` (str): Matches the ID from TextMessageStartEvent
+- `delta` (str): Text content chunk (non-empty)
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_8
+
+LANGUAGE: python
+CODE:
+```
+class TextMessageContentEvent(BaseEvent):
+    type: Literal[EventType.TEXT_MESSAGE_CONTENT]
+    message_id: str
+    delta: str  # Non-empty string
+
+    def model_post_init(self, __context):
+        if len(self.delta) == 0:
+            raise ValueError("Delta must not be an empty string")
+```
+
+----------------------------------------
+
+TITLE: RawEvent - Python
+DESCRIPTION: Used to pass through events from external systems.
+
+Import: `from ag_ui.core import RawEvent`
+
+Properties:
+- `event` (Any): Original event data
+- `source` (Optional[str]): Source of the event
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_16
+
+LANGUAGE: python
+CODE:
+```
+class RawEvent(BaseEvent):
+    type: Literal[EventType.RAW]
+    event: Any
+    source: Optional[str] = None
+```
+
+----------------------------------------
+
+TITLE: Updating OpenAI Integration package.json - JSON
+DESCRIPTION: This JSON snippet illustrates how to update the `package.json` file for the new OpenAI integration. Key fields like `name`, `author`, and `version` should be modified to reflect the specific integration details.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_6
+
+LANGUAGE: json
+CODE:
+```
+{
+  "name": "@ag-ui/openai",
+  "author": "Your Name <your-email@example.com>",
+  "version": "0.0.1",
+
+  ... rest of package.json
+}
+```
+
+----------------------------------------
+
+TITLE: Define Step Started Event in Python
+DESCRIPTION: This Python class represents an event signaling the beginning of a specific step within an agent run. It inherits from `BaseEvent` and includes a property for the name of the step (`step_name`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_5
+
+LANGUAGE: python
+CODE:
+```
+class StepStartedEvent(BaseEvent):
+    type: Literal[EventType.STEP_STARTED]
+    step_name: str
+```
+
+----------------------------------------
+
+TITLE: Defining DeveloperMessage Type (TypeScript)
+DESCRIPTION: Defines the structure for a message originating from a developer. It includes a unique ID, the fixed "developer" role, required text content, and an optional sender name.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_2
+
+LANGUAGE: typescript
+CODE:
+```
+type DeveloperMessage = {
+  id: string
+  role: "developer"
+  content: string
+  name?: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining DeveloperMessage Class (Python)
+DESCRIPTION: Defines the `DeveloperMessage` class, a Pydantic model representing a message sent by a developer in the Agent UI Protocol. It inherits from `BaseMessage` and includes a fixed `role` of "developer" and a required `content` string.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_2
+
+LANGUAGE: Python
+CODE:
+```
+class DeveloperMessage(BaseMessage):
+    role: Literal["developer"]
+    content: str
+```
+
+----------------------------------------
+
+TITLE: Defining SystemMessage Class (Python)
+DESCRIPTION: Defines the `SystemMessage` class, a Pydantic model representing a message generated by the system in the Agent UI Protocol. It inherits from `BaseMessage` and includes a fixed `role` of "system" and a required `content` string.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_3
+
+LANGUAGE: Python
+CODE:
+```
+class SystemMessage(BaseMessage):
+    role: Literal["system"]
+    content: str
+```
+
+----------------------------------------
+
+TITLE: Define Step Finished Event in Python
+DESCRIPTION: This Python class represents an event signaling the successful completion of a specific step within an agent run. It inherits from `BaseEvent` and includes a property for the name of the step (`step_name`).
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_6
+
+LANGUAGE: python
+CODE:
+```
+class StepFinishedEvent(BaseEvent):
+    type: Literal[EventType.STEP_FINISHED]
+    step_name: str
+```
+
+----------------------------------------
+
+TITLE: Defining State Type (TypeScript)
+DESCRIPTION: Defines the `State` type, representing the execution state of an agent. It is defined as `any`, allowing flexibility for different agent implementations.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/types.mdx#_snippet_12
+
+LANGUAGE: typescript
+CODE:
+```
+type State = any
+```
+
+----------------------------------------
+
+TITLE: StepFinishedEvent
+DESCRIPTION: Signals the completion of a step within an agent run.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_6
+
+LANGUAGE: TypeScript
+CODE:
+```
+type StepFinishedEvent = BaseEvent & {
+  type: EventType.STEP_FINISHED
+  stepName: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining MessagesSnapshotEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `MessagesSnapshotEvent`, providing a snapshot of all messages in a conversation. It includes a `messages` property which is an array of `Message` objects.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_15
+
+LANGUAGE: typescript
+CODE:
+```
+type MessagesSnapshotEvent = BaseEvent & {
+  type: EventType.MESSAGES_SNAPSHOT
+  messages: Message[]
+}
+```
+
+----------------------------------------
+
+TITLE: Defining StateSnapshotEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `StateSnapshotEvent`, providing a complete snapshot of an agent's state. It includes a `snapshot` property which holds the state data, expected to conform to a `StateSchema`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_13
+
+LANGUAGE: typescript
+CODE:
+```
+type StateSnapshotEvent = BaseEvent & {
+  type: EventType.STATE_SNAPSHOT
+  snapshot: any // StateSchema
+}
+```
+
+----------------------------------------
+
+TITLE: JSON Patch Move Operation Example (JSON)
+DESCRIPTION: Example demonstrating the JSON Patch `move` operation. This operation moves a value from one location (`from`) to another (`path`) within the document.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_6
+
+LANGUAGE: json
+CODE:
+```
+{ "op": "move", "path": "/completed_items", "from": "/pending_items/0" }
+```
+
+----------------------------------------
+
+TITLE: JSON Patch Replace Operation Example (JSON)
+DESCRIPTION: Example demonstrating the JSON Patch `replace` operation. This operation replaces the value at the specified path with a new value.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/state.mdx#_snippet_4
+
+LANGUAGE: json
+CODE:
+```
+{ "op": "replace", "path": "/conversation_state", "value": "paused" }
+```
+
+----------------------------------------
+
+TITLE: Defining State Type Alias (Python)
+DESCRIPTION: Defines the `State` type as a flexible alias for `Any`. This allows the agent's state to hold any data structure required by the specific agent implementation. Requires importing `State` from `ag_ui.core`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/types.mdx#_snippet_12
+
+LANGUAGE: python
+CODE:
+```
+State = Any
+```
+
+----------------------------------------
+
+TITLE: StepStartedEvent
+DESCRIPTION: Signals the start of a step within an agent run.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_5
+
+LANGUAGE: TypeScript
+CODE:
+```
+type StepStartedEvent = BaseEvent & {
+  type: EventType.STEP_STARTED
+  stepName: string
+}
+```
+
+----------------------------------------
+
+TITLE: Defining CustomEvent Type (Typescript)
+DESCRIPTION: Defines the structure for the `CustomEvent`, used for application-specific events. It includes a `name` for the event and a `value` associated with it.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_17
+
+LANGUAGE: typescript
+CODE:
+```
+type CustomEvent = BaseEvent & {
+  type: EventType.CUSTOM
+  name: string
+  value: any
+}
+```
+
+----------------------------------------
+
+TITLE: Default HttpAgent requestInit Implementation
+DESCRIPTION: Shows the default implementation of the `requestInit` method, setting the HTTP method to POST, configuring headers (including Content-Type and Accept), setting the request body, and attaching the abort signal.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+{
+  method: "POST",
+  headers: {
+    ...this.headers,
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+  },
+  body: JSON.stringify(input),
+  signal: this.abortController.signal,
+}
+```
+
+----------------------------------------
+
+TITLE: prepareRunAgentInput Protected Method Signature (TypeScript)
+DESCRIPTION: Signature for the protected `prepareRunAgentInput` method, used to transform optional `RunAgentParameters` into the required `RunAgentInput` format before execution.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_9
+
+LANGUAGE: typescript
+CODE:
+```
+protected prepareRunAgentInput(parameters?: RunAgentParameters): RunAgentInput
+```
+
+----------------------------------------
+
+TITLE: TextMessageContentEvent
+DESCRIPTION: Represents a chunk of content in a streaming text message.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_8
+
+LANGUAGE: TypeScript
+CODE:
+```
+type TextMessageContentEvent = BaseEvent & {
+  type: EventType.TEXT_MESSAGE_CONTENT
+  messageId: string
+  delta: string // Non-empty string
+}
+```
+
+----------------------------------------
+
+TITLE: TextMessageStartEvent
+DESCRIPTION: Signals the start of a text message.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_7
+
+LANGUAGE: TypeScript
+CODE:
+```
+type TextMessageStartEvent = BaseEvent & {
+  type: EventType.TEXT_MESSAGE_START
+  messageId: string
+  role: "assistant"
+}
+```
+
+----------------------------------------
+
+TITLE: RunErrorEvent
+DESCRIPTION: Signals an error during an agent run.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_4
+
+LANGUAGE: TypeScript
+CODE:
+```
+type RunErrorEvent = BaseEvent & {
+  type: EventType.RUN_ERROR
+  message: string
+  code?: string
+}
+```
+
+----------------------------------------
+
+TITLE: HttpAgent run Protected Method Signature
+DESCRIPTION: Signature for the protected `run` method, which implements the core agent execution logic using HTTP requests, overriding the abstract method from the base class.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+```
+protected run(input: RunAgentInput): RunAgent
+```
+
+----------------------------------------
+
+TITLE: apply Protected Method Signature (TypeScript)
+DESCRIPTION: Signature for the protected `apply` method, intended to process events emitted during the agent run and update the agent's state. It takes `RunAgentInput` and returns `ApplyEvents`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+```
+protected apply(input: RunAgentInput): ApplyEvents
+```
+
+----------------------------------------
+
+TITLE: Defining Developer Message Structure in AG-UI (TypeScript)
+DESCRIPTION: Defines the structure for internal messages used for development or debugging purposes. It includes the base fields, sets the role to "developer", and requires the `content` field for the message details. An optional `name` can be included.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/concepts/messages.mdx#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+```
+interface DeveloperMessage {
+  id: string
+  role: "developer"
+  content: string
+  name?: string
+}
+```
+
+----------------------------------------
+
+TITLE: clone Method Signature (TypeScript)
+DESCRIPTION: Signature for the `clone` method, which creates and returns a deep copy of the current agent instance.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_6
+
+LANGUAGE: typescript
+CODE:
+```
+clone(): AbstractAgent
+```
+
+----------------------------------------
+
+TITLE: HttpAgent requestInit Protected Method Signature
+DESCRIPTION: Signature for the protected `requestInit` method, which is responsible for configuring the HTTP request options based on the input parameters.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_6
+
+LANGUAGE: typescript
+CODE:
+```
+protected requestInit(input: RunAgentInput): RequestInit
+```
+
+----------------------------------------
+
+TITLE: TextMessageEndEvent - Python
+DESCRIPTION: Signals the end of a text message.
+
+Import: `from ag_ui.core import TextMessageEndEvent`
+
+Properties:
+- `message_id` (str): Matches the ID from TextMessageStartEvent
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/python/core/events.mdx#_snippet_9
+
+LANGUAGE: python
+CODE:
+```
+class TextMessageEndEvent(BaseEvent):
+    type: Literal[EventType.TEXT_MESSAGE_END]
+    message_id: str
+```
+
+----------------------------------------
+
+TITLE: RunFinishedEvent
+DESCRIPTION: Signals the successful completion of an agent run.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_3
+
+LANGUAGE: TypeScript
+CODE:
+```
+type RunFinishedEvent = BaseEvent & {
+  type: EventType.RUN_FINISHED
+  threadId: string
+  runId: string
+}
+```
+
+----------------------------------------
+
+TITLE: RunStartedEvent
+DESCRIPTION: Signals the start of an agent run.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/core/events.mdx#_snippet_2
+
+LANGUAGE: TypeScript
+CODE:
+```
+type RunStartedEvent = BaseEvent & {
+  type: EventType.RUN_STARTED
+  threadId: string
+  runId: string
+}
+```
+
+----------------------------------------
+
+TITLE: Importing HttpAgent Class
+DESCRIPTION: Imports the `HttpAgent` class from the `@ag-ui/client` package to use in the application.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+import { HttpAgent } from "@ag-ui/client"
+```
+
+----------------------------------------
+
+TITLE: Importing AbstractAgent (TypeScript)
+DESCRIPTION: Imports the `AbstractAgent` class from the `@ag-ui/client` package to be used as a base class for custom agent implementations.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/abstract-agent.mdx#_snippet_0
+
+LANGUAGE: typescript
+CODE:
+```
+import { AbstractAgent } from "@ag-ui/client"
+```
+
+----------------------------------------
+
+TITLE: Expected Response from Basic Express Endpoint
+DESCRIPTION: This JSON snippet shows the expected response from the basic Express endpoint when successfully called. It confirms that the server is running and returning the predefined 'Hello World' message.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_15
+
+LANGUAGE: json
+CODE:
+```
+{ "message": "Hello World" }
+```
+
+----------------------------------------
+
+TITLE: HttpAgent abortRun Method Signature
+DESCRIPTION: Signature for the public `abortRun` method, used to cancel the currently executing HTTP request initiated by `runAgent`.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/sdk/js/client/http-agent.mdx#_snippet_5
+
+LANGUAGE: typescript
+CODE:
+```
+abortRun(): void
+```
+
+----------------------------------------
+
+TITLE: Installing Protobuf - Bash
+DESCRIPTION: This command installs Protocol Buffers (Protobuf) using Homebrew. Protobuf is a language-neutral, platform-neutral, extensible mechanism for serializing structured data, often used in communication protocols.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_1
+
+LANGUAGE: bash
+CODE:
+```
+brew install protobuf
+```
+
+----------------------------------------
+
+TITLE: Expected 'Hello World' JSON Response
+DESCRIPTION: This JSON object represents the expected response from the basic FastAPI endpoint when a POST request is made to `/awp`. It confirms the server's successful operation.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/server.mdx#_snippet_5
+
+LANGUAGE: json
+CODE:
+```
+{ "message": "Hello World" }
+```
+
+----------------------------------------
+
+TITLE: Registering OpenAI Integration in Dojo Menu - TypeScript
+DESCRIPTION: This TypeScript code adds the OpenAI integration configuration to the `menuIntegrations` array in `apps/dojo/src/menu.ts`. This step makes the OpenAI integration visible and selectable within the Dojo's user interface.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_8
+
+LANGUAGE: typescript
+CODE:
+```
+// ...
+export const menuIntegrations: MenuIntegrationConfig[] = [
+  // ...
+
+  configureIntegration({
+    id: "openai",
+    name: "OpenAI",
+    features: ["agentic_chat"]
+  })
+]
+```
+
+----------------------------------------
+
+TITLE: Renaming Agent Class in TypeScript
+DESCRIPTION: This TypeScript snippet shows how to rename the exported class in `integrations/openai/src/index.ts` to `OpenAIAgent`. This change aligns the class name with the specific OpenAI integration being developed.
+SOURCE: https://github.com/ag-ui-protocol/ag-ui/blob/main/docs/quickstart/middleware.mdx#_snippet_7
+
+LANGUAGE: typescript
+CODE:
+```
+// change the name to OpenAIAgent
+export class OpenAIAgent extends AbstractAgent {}
+```
