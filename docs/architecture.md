@@ -144,7 +144,6 @@ backend/
 ├── Dockerfile                  # Docker configuration for the backend
 ├── poetry.lock                 # Poetry lock file
 ├── pyproject.toml              # Python project configuration (Poetry)
-└── README.md
 ```
 
 ## 4. Data Flow and Communication

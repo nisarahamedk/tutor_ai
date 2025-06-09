@@ -38,35 +38,61 @@ An AI-driven tutoring system that delivers personalized and adaptive learning ex
 
 ## Project Structure
 
+The project is now organized into two main directories: `frontend` and `backend`.
+
+- **`frontend/`**: Contains the Next.js user interface for the chat application. (Future setup)
+  - `public/`: Static assets, including the initial simple HTML/CSS chat interface.
+  - `src/`: Frontend source code (e.g., React components, styles).
+- **`backend/`**: Contains the FastAPI application, AI agents, and related logic.
+  - `app/`: Core application code.
+    - `api/`: API endpoints.
+    - `agents/`: AI agent implementations.
+    - `core/`: Core utilities like CORS configuration and the static server for the simple chat interface.
+    - `services/`: Business logic services.
+    - `db/`: Database interaction layer (planned).
+    - `temporal/`: Temporal workflow definitions (planned).
+  - `tests/`: Backend tests.
+  - `Dockerfile`: Docker configuration for the backend.
+  - `pyproject.toml`, `poetry.lock`: Python dependency management.
+- **`docs/`**: Project documentation.
+- **`docker-compose.yml`**: Orchestrates the backend and other services.
+- **`temporal/`**: Temporal.io server configuration (can be moved into backend or kept separate based on deployment).
+
+
+A simplified view of the key directories:
 ```
 tutor_ai/
 ├── README.md
-├── agents/
-│   ├── llm_service.py
-│   └── pre_assessment_agent.py
-├── api/
-│   ├── cors_config.py
-│   ├── main.py
-│   └── static_server.py
+├── backend/
+│   ├── app/
+│   │   ├── agents/
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       └── endpoints/
+│   │   │           └── chat.py   # Main API logic previously in api/main.py
+│   │   ├── core/
+│   │   │   ├── cors_config.py
+│   │   │   └── static_server.py # Serves the simple chat UI
+│   │   └── main.py             # FastAPI app entry point
+│   ├── Dockerfile
+│   ├── poetry.lock
+│   ├── pyproject.toml
+│   └── tests/
+│       └── unit/
+│           └── agents/
+├── docs/
+│   ├── architecture.md
+│   └── ...
+├── frontend/
+│   ├── public/
+│   │   └── templates/            # Simple HTML/CSS chat interface
+│   │       ├── css/
+│   │       │   └── style.css
+│   │       └── index.html
+│   └── src/                    # For Next.js app (future)
 ├── docker-compose.yml
-├── poetry.lock
-├── pyproject.toml
-├── scripts/
-│   └── init-poetry.sh
-├── templates/
-│   ├── css/
-│   │   └── style.css
-│   └── index.html
-├── temporal/
-│   └── dynamicconfig/
-│       └── development.yaml
-└── tests/
-    ├── integration/
-    │   └── test_api.py
-    └── unit/
-        └── agents/
-            ├── test_llm_service.py
-            └── test_pre_assessment_agent.py
+├── temporal/                   # Temporal server config
+└── ...
 ```
 
 ## Current Implementation
@@ -158,31 +184,39 @@ tutor_ai/
 
 ## Getting Started
 
-1. Clone the repository
-2. Bring up the services using
-   `docker compose up`
+1. Clone the repository.
+2. Navigate to the `backend` directory if you need to run backend-specific commands: `cd backend`
+3. To start all services (including the backend API and the simple frontend server), run from the project root:
+   ```bash
+   docker-compose up --build
+   ```
+   - The backend API will be available at `http://localhost:54321`.
+   - The simple chat interface (served by the `static` service) will be available at `http://localhost:54322`.
 
 ### Environment Configuration
 
-The application uses environment variables for configuration. These can be set in the `.env` file:
+The backend application uses environment variables for configuration. These can be set in a `.env` file located in the `backend/` directory (e.g., `backend/.env`). Example variables:
 
 - `API_PORT`: Port for the main API server (default: 54321)
 - `STATIC_PORT`: Port for the static file server (default: 54322)
 
 You can customize these values by editing the `.env` file.
 
-### Running Tests
+### Running Tests (Backend)
 
-The project uses pytest for testing. To run the tests:
+The backend project uses pytest for testing. To run the tests:
 
-1. Make sure the API server is running (needed for integration tests)
-2. Run the tests:
+1. Ensure you are in the `backend` directory: `cd backend`
+2. Make sure any dependencies like a running database or other services are available if your tests require them. (The current tests might require the API server to be running for integration tests, though this is often handled by test fixtures).
+3. Run the tests using Poetry:
    ```bash
    poetry run pytest tests/
    ```
+   (The `tests/` path is relative to the `backend` directory).
 
 The test suite includes:
-- Integration tests for the API layer
+- Integration tests for the API layer (`backend/tests/integration/`)
+- Unit tests for agents (`backend/tests/unit/agents/`)
 - WebSocket chat flow testing
 - Health check endpoint testing
 
@@ -228,8 +262,8 @@ When contributing to this project:
    - Update tests to handle the new prompt template structure
    - Test the integration with Ollama
    - Key files to work on:
-     - `/agents/llm_service.py`
-     - `/tests/unit/agents/test_llm_service.py`
+     - `backend/app/agents/llm_service.py`
+     - `backend/tests/unit/agents/test_llm_service.py`
 
 2. Future Work:
    - Set up Temporal workflows

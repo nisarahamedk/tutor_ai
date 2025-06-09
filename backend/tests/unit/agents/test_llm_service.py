@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from agents.llm_service import LLMService
+from app.agents.llm_service import LLMService
 
 @pytest.fixture
 def llm_service():
@@ -19,8 +19,8 @@ async def test_generate_assessment_questions_basic():
     assert any("Python" in q for q in questions)
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.LiteLLMModel')
-@patch('agents.llm_service.CodeAgent')
+@patch('app.agents.llm_service.LiteLLMModel')
+@patch('app.agents.llm_service.CodeAgent')
 async def test_generate_assessment_questions_with_ollama(mock_code_agent, mock_litellm):
     """Test question generation with LiteLLMModel integration."""
     # Mock LiteLLMModel and CodeAgent
@@ -60,8 +60,8 @@ async def test_generate_assessment_questions_with_ollama(mock_code_agent, mock_l
     assert all(q.endswith("?") for q in questions)
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.LiteLLMModel')
-@patch('agents.llm_service.CodeAgent')
+@patch('app.agents.llm_service.LiteLLMModel')
+@patch('app.agents.llm_service.CodeAgent')
 async def test_ollama_error_handling(mock_code_agent, mock_litellm):
     """Test fallback behavior when LiteLLMModel API fails."""
     # Mock LiteLLMModel and CodeAgent to raise an exception
@@ -112,8 +112,8 @@ async def test_question_format():
         assert not question.startswith("-") # Should not include bullet points
 
 @pytest.mark.asyncio
-@patch('agents.llm_service.LiteLLMModel')
-@patch('agents.llm_service.CodeAgent')
+@patch('app.agents.llm_service.LiteLLMModel')
+@patch('app.agents.llm_service.CodeAgent')
 async def test_invalid_response_handling(mock_code_agent, mock_litellm):
     """Test handling of invalid responses from the LLM."""
     mock_litellm_instance = AsyncMock()
