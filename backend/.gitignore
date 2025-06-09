@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Poetry
+.venv/
+poetry.lock
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*local
+
+# Test output
+htmlcov/
+.pytest_cache/
+.coverage
