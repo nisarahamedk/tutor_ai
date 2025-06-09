@@ -1,0 +1,54 @@
+{
+  "epics": [
+    {
+      "id": "EPIC-001",
+      "title": "Foundation - Core Infrastructure and Basic Chat Setup",
+      "description": "This epic covers setting up the foundational infrastructure for the ITS, including the frontend (Next.js) and backend (FastAPI) project structures, basic database (Supabase) integration, initial Temporal.io setup for chat session management, and a rudimentary chat interface allowing users to send and receive messages. This lays the groundwork for all future development.",
+      "priority": "high",
+      "estimated_story_points": 21,
+      "dependencies": [],
+      "status": "pending",
+      "business_value": "Establishes the core platform, enabling initial technical validation and providing the basic interaction framework (chat) for subsequent AI tutoring features. Unlocks parallel work on frontend UI, backend API contracts, and basic workflow definitions."
+    },
+    {
+      "id": "EPIC-002",
+      "title": "Foundation - AI Agent Integration and Basic Tutoring Logic",
+      "description": "This epic focuses on integrating the first AI agent into the backend, enabling it to process user messages from the chat interface and generate simple text responses. It includes choosing an AI agent framework, connecting to an LLM, and modifying Temporal workflows to incorporate AI agent calls. Basic content delivery mechanisms will be implemented.",
+      "priority": "high",
+      "estimated_story_points": 13,
+      "dependencies": ["EPIC-001"],
+      "status": "pending",
+      "business_value": "Introduces the \"intelligent\" aspect of the ITS by enabling AI-driven responses. This demonstrates the core value proposition of AI tutoring and allows for early feedback on AI interaction patterns. Provides a live AI to develop against for frontend."
+    },
+    {
+      "id": "EPIC-003",
+      "title": "Core - Rich Component Implementation and Advanced Interactivity",
+      "description": "This epic is dedicated to developing and integrating a library of rich interactive UI components (e.g., multiple-choice questions, sliders, interactive cards) into the chat interface. The AI agent will be enhanced to request and process interactions with these components, moving beyond simple text-based exchanges.",
+      "priority": "medium",
+      "estimated_story_points": 21,
+      "dependencies": ["EPIC-002"],
+      "status": "pending",
+      "business_value": "Significantly enhances user engagement and learning effectiveness by providing interactive tools within the chat. Allows for more diverse and dynamic learning activities, catering to different learning styles and content types. Unblocks frontend development of the component library once component contracts are defined."
+    },
+    {
+      "id": "EPIC-004",
+      "title": "Core - Learning Path Orchestration and Personalization",
+      "description": "This epic focuses on implementing adaptive learning paths and personalization features. It involves developing logic for managing learning tracks, adapting content and assessments based on user performance, and enhancing the AI agent to guide users through these personalized journeys. Temporal workflows will be expanded to manage the state of these longer-term learning paths.",
+      "priority": "medium",
+      "estimated_story_points": 34,
+      "dependencies": ["EPIC-003"],
+      "status": "pending",
+      "business_value": "Delivers the core promise of a personalized and adaptive learning experience, tailoring content and pacing to individual user needs. This is key to improving learning outcomes and differentiating the ITS."
+    },
+    {
+      "id": "EPIC-005",
+      "title": "Polish - System Testing, Deployment, and Iteration Preparedness",
+      "description": "This epic covers the tasks necessary to ensure the system is robust, deployable, and ready for ongoing iteration. It includes developing comprehensive test suites (unit, integration, E2E), setting up production infrastructure, finalizing CI/CD pipelines, and implementing monitoring. While iteration is ongoing, this epic prepares the system for that phase.",
+      "priority": "high",
+      "estimated_story_points": 13,
+      "dependencies": ["EPIC-004"],
+      "status": "pending",
+      "business_value": "Ensures a high-quality, reliable, and maintainable product is delivered. Prepares the system for scalable operation and continuous improvement based on user feedback and evolving requirements."
+    }
+  ]
+}
