@@ -1,36 +1,46 @@
 import logging
 import logging.handlers
+import os
 
-handler = logging.handlers.RotatingFileHandler('api/server.log', maxBytes=1000000, backupCount=5)
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
+log_file_path = "logs/chat_server.log"
+
+handler = logging.handlers.RotatingFileHandler(log_file_path, maxBytes=1000000, backupCount=5)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
+# Get a specific logger for this module if preferred, or configure root logger carefully
+chat_logger = logging.getLogger(__name__) # Using a specific logger
+chat_logger.setLevel(logging.INFO)
+chat_logger.addHandler(handler)
+# If you intend to configure the root logger, ensure it's what you want
+# logger = logging.getLogger()
+# logger.setLevel(logging.INFO)
+# logger.addHandler(handler)
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List
 import json
-import logging
+# import logging # logging already imported
 
-from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.middleware.cors import CORSMiddleware # Middleware is handled in main.py
 
-app = FastAPI()
+router = APIRouter()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"]  # Allows all headers
-)
+# app.add_middleware( # This will be done in main.py for the main app instance
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Allows all origins
+#     allow_credentials=True,
+#     allow_methods=["*"],  # Allows all methods
+#     allow_headers=["*"]  # Allows all headers
+# )
 
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
-        logging.info("ConnectionManager.connect called")
+        chat_logger.info("ConnectionManager.connect called")
         await websocket.accept()
         self.active_connections.append(websocket)
 
@@ -42,11 +52,11 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.websocket("/ws/chat")
+@router.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
-    logging.info("WebSocket connected")
-    logging.info(f"WebSocket state: {websocket.client_state}")
+    chat_logger.info("WebSocket connected")
+    chat_logger.info(f"WebSocket state: {websocket.client_state}")
     try:
         while True:
             data = await websocket.receive_text()
@@ -61,7 +71,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await manager.send_personal_message(json.dumps(error_response), websocket)
                 continue
 
-            logging.info(f"Received message: {message}")
+            chat_logger.info(f"Received message: {message}")
             if not isinstance(message, dict):
                 error_response = {
                     "type": "error",
@@ -81,17 +91,17 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 try:
                     # For now, let's directly use the PreAssessmentAgent without Temporal
-                    from agents.pre_assessment_agent import PreAssessmentAgent
+                    from app.agents.pre_assessment_agent import PreAssessmentAgent
                     agent = PreAssessmentAgent()
                     assessment = await agent.assess(message.get("content"))
                     response = {
                         "type": "assessment",
                         "content": assessment
                     }
-                    logging.info(f"Sending response: {response}")
+                    chat_logger.info(f"Sending response: {response}")
                     await manager.send_personal_message(json.dumps(response), websocket)
                 except Exception as e:
-                    logging.error(f"Error processing message: {e}")
+                    chat_logger.error(f"Error processing message: {e}")
                     error_response = {
                         "type": "error",
                         "content": str(e)
@@ -107,10 +117,12 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-@app.get("/")
+# These routes can be part of this router or a separate one, then included in main.py
+@router.get("/")
 async def root():
-    return {"message": "Welcome to Personal Tutor AI System"}
+    return {"message": "Welcome to Personal Tutor AI System - Chat API"}
 
-@app.get("/health")
+@router.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    # This health check is specific to the chat router/service
+    return {"status": "healthy", "service": "chat"}

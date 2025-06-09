@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  api:
+  backend:
     build:
-      context: .
+      context: ./backend
       target: development
-    command: poetry run uvicorn api.main:app --host 0.0.0.0 --port 54321 --reload
+    command: poetry run uvicorn app.main:app --host 0.0.0.0 --port 54321 --reload
     ports:
       - "54321:54321"
     environment:
@@ -14,9 +14,11 @@ services:
 
   static:
     build: 
-      context: .
+      context: ./backend  # Context is backend, uses backend/Dockerfile
       target: development
-    command: poetry run uvicorn api.static_server:app --host 0.0.0.0 --port 54322 --reload
+    command: poetry run uvicorn app.core.static_server:app --host 0.0.0.0 --port 54322 --reload
+    volumes:
+      - ./frontend/public/templates:/app/static_frontend_templates:ro # Mount templates
     environment:
       - ENVIRONMENT=development
       - API_PORT=54321

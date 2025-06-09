@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from agents.pre_assessment_agent import PreAssessmentAgent
+from app.agents.pre_assessment_agent import PreAssessmentAgent
 
 @pytest.fixture
 def agent():

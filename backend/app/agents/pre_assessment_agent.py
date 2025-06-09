@@ -1,6 +1,6 @@
 from typing import Dict, List
 import logging
-from .llm_service import LLMService
+from app.agents.llm_service import LLMService
 
 class PreAssessmentAgent:
     def __init__(self, llm_service: LLMService = None):
