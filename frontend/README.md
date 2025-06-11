@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+To run the development server, navigate to the `frontend/` directory and run one of the following commands:
 
 ```bash
 npm run dev
@@ -14,11 +14,15 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) (or the port indicated in your terminal if 3000 is in use) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Note on Directory Structure
+
+You may notice a `frontend/frontend/` subdirectory. This appears to be a development artifact or remnant. Developers should primarily work within the main `frontend/` directory and treat `frontend/frontend/` as an ignored item. Attempts to remove this nested directory have been unsuccessful due to limitations encountered with the available development tools.
 
 ## Learn More
 
