@@ -37,7 +37,7 @@ jest.mock('lucide-react', () => ({
 const mockRunCode = jest.fn();
 const mockSubmitCode = jest.fn();
 // Path adjusted to be discoverable via moduleDirectories
-jest.mock('lib/api-mocks', () => ({
+jest.mock('@/lib/api-mocks', () => ({
   mockApi: {
     runCode: (code) => mockRunCode(code),
     submitCode: (lessonId, code) => mockSubmitCode(lessonId, code),

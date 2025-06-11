@@ -1,4 +1,3 @@
-// frontend/src/features/ai-tutor/AITutorChat.tsx
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -11,13 +10,19 @@ import {
   TrendingUp,
   BookOpen,
   RotateCcw,
-  Brain
+  Brain,
+  Zap,
+  Target,
+  Award,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // TabsContent might not be directly used here if content is managed by messages
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 // Import previously created components
 import { HomePageComponent } from '@/components/ai-tutor/HomePageComponent';
@@ -28,7 +33,7 @@ import { InteractiveLessonComponent } from '@/components/ai-tutor/InteractiveLes
 import { ProgressDashboardComponent } from '@/components/ai-tutor/ProgressDashboardComponent';
 import { FlashcardReviewComponent } from '@/components/ai-tutor/FlashcardReviewComponent';
 
-export interface Message { // Ensure this is exported
+export interface Message {
   id: string;
   type: 'user' | 'ai';
   content: string;
@@ -36,404 +41,497 @@ export interface Message { // Ensure this is exported
   component?: React.ReactNode;
 }
 
+type TabType = 'home' | 'progress' | 'review' | 'explore';
+
+// Tab-specific initial messages
+const getInitialMessages = (tab: TabType): Message[] => {
+  const baseMessage = {
+    id: '1',
+    type: 'ai' as const,
+    timestamp: new Date(),
+  };
+
+  switch (tab) {
+    case 'home':
+      return [{
+        ...baseMessage,
+        content: "Welcome to TutorAI! I'm here to guide your learning journey. What would you like to explore today?",
+      }];
+    case 'progress':
+      return [{
+        ...baseMessage,
+        content: "Here you can track your learning progress across all subjects. Let me show you your current achievements:",
+        component: <ProgressDashboardComponent onContinueLearning={() => {}} onSelectTrack={() => {}} />
+      }];
+    case 'review':
+      return [{
+        ...baseMessage,
+        content: "Ready to review what you've learned? Let's reinforce your knowledge with some practice:",
+      }];
+    case 'explore':
+      return [{
+        ...baseMessage,
+        content: "Discover new learning paths and subjects! What area would you like to explore?",
+        component: <TrackExplorationComponent onTrackSelect={() => {}} />
+      }];
+    default:
+      return [{
+        ...baseMessage,
+        content: "Welcome to TutorAI! I'm here to guide your learning journey.",
+      }];
+  }
+};
+
 export const AITutorChat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: "Hi! I'm your AI tutor. I'm here to help you learn and grow in tech. What would you like to explore today?",
-      timestamp: new Date(),
-      component: <HomePageComponent onStartNewTrack={() => handleStartNewTrack()} onContinueLearning={() => handleContinueLearning()} onStartReview={() => handleStartReview()} />
-    }
-  ]);
+  // Separate message states for each tab
+  const [tabMessages, setTabMessages] = useState<Record<TabType, Message[]>>({
+    home: getInitialMessages('home'),
+    progress: getInitialMessages('progress'),
+    review: getInitialMessages('review'),
+    explore: getInitialMessages('explore'),
+  });
+  
   const [inputValue, setInputValue] = useState('');
-  const [currentStep, setCurrentStep] = useState<'home' | 'exploration' | 'assessment' | 'preferences' | 'learning' | 'progress'>('home');
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Get current tab's messages
+  const currentMessages = tabMessages[activeTab];
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [currentMessages, activeTab]);
 
-  // --- Handler functions from twentyfirstdev.js ---
+
+  // Add message to current tab
+  const addMessageToCurrentTab = (message: Message) => {
+    setTabMessages(prev => ({
+      ...prev,
+      [activeTab]: [...prev[activeTab], message]
+    }));
+  };
+
+  // Handler functions
   const handleStartNewTrack = () => {
-    const aiResponse: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
       type: 'ai',
-      content: "Great! Let's find a new learning track for you.",
+      content: "Great! Let's explore learning tracks to find the perfect path for you:",
       timestamp: new Date(),
-      component: <TrackExplorationComponent onTrackSelect={(track) => handleTrackSelect(track)} />
+      component: <TrackExplorationComponent onTrackSelect={handleTrackSelection} />
     };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('exploration');
+    addMessageToCurrentTab(newMessage);
     setActiveTab('explore');
   };
 
-  const handleContinueLearning = () => {
-    const aiResponse: Message = {
+  const handleTrackSelection = (track: LearningTrack) => {
+    const newMessage: Message = {
       id: Date.now().toString(),
       type: 'ai',
-      content: "Welcome back! Here's your current progress. Let's continue where you left off.",
+      content: `Excellent choice! The ${track.title} track is perfect for your goals. Before we start, let me assess your current skill level:`,
       timestamp: new Date(),
-      component: <ProgressDashboardComponent
-        onContinueLearning={() => handleContinueFromProgress()}
-        onSelectTrack={(trackName) => handleSelectTrackFromProgress(trackName)}
-      />
+      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} trackId={track.id} />
     };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('progress');
-    setActiveTab('progress');
+    addMessageToCurrentTab(newMessage);
+  };
+
+  const handleAssessmentComplete = (skills: SkillAssessment[]) => {
+    const avgLevel = skills.reduce((sum, skill) => sum + skill.level, 0) / skills.length;
+    const levelText = avgLevel >= 4 ? 'advanced' : avgLevel >= 2.5 ? 'intermediate' : 'beginner';
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: `Based on your assessment, you're at ${levelText} level. Now let's customize your learning experience:`,
+      timestamp: new Date(),
+      component: <LearningPreferencesComponent onComplete={handlePreferencesComplete} />
+    };
+    addMessageToCurrentTab(newMessage);
+  };
+
+  const handlePreferencesComplete = () => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: "Perfect! Your learning plan is ready. Let's start with an interactive lesson:",
+      timestamp: new Date(),
+      component: <InteractiveLessonComponent />
+    };
+    addMessageToCurrentTab(newMessage);
+  };
+
+  const handleContinueLearning = () => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: "Welcome back! Let's continue where you left off:",
+      timestamp: new Date(),
+      component: <InteractiveLessonComponent />
+    };
+    addMessageToCurrentTab(newMessage);
   };
 
   const handleStartReview = () => {
-    const aiResponse: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
       type: 'ai',
-      content: "Great choice! Let's review some key concepts with flashcards. This uses spaced repetition to help cement your knowledge.",
+      content: "Let's review what you've learned with some flashcards:",
       timestamp: new Date(),
-      component: <FlashcardReviewComponent onComplete={() => handleReviewComplete()} />
+      component: <FlashcardReviewComponent onComplete={handleReviewComplete} />
     };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('learning'); // Or a dedicated 'review' step if preferred
+    addMessageToCurrentTab(newMessage);
     setActiveTab('review');
   };
 
   const handleReviewComplete = () => {
-    const aiResponse: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
       type: 'ai',
-      content: "Excellent work! You've completed your flashcard review. What would you like to do next?",
-      timestamp: new Date(),
-      component: <HomePageComponent onStartNewTrack={handleStartNewTrack} onContinueLearning={handleContinueLearning} onStartReview={handleStartReview} />
-    };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('home');
-    setActiveTab('home');
-  };
-
-  const handleContinueFromProgress = () => {
-    const aiResponse: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: "Alright, let's jump back into your interactive lesson!",
-      timestamp: new Date(),
-      component: <InteractiveLessonComponent />
-    };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('learning');
-  };
-
-  const handleSelectTrackFromProgress = (trackName: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: `I want to continue with ${trackName}`,
+      content: "Great job on the review! You're making excellent progress. What would you like to do next?",
       timestamp: new Date()
     };
-    const aiResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      type: 'ai',
-      content: `Great! Let's continue with your ${trackName} track. Here's your next lesson:`,
-      timestamp: new Date(),
-      component: <InteractiveLessonComponent />
-    };
-    setMessages(prev => [...prev, userMessage, aiResponse]);
-    setCurrentStep('learning');
+    addMessageToCurrentTab(newMessage);
   };
 
-  const handleTrackSelect = (track: LearningTrack) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: `I'm interested in ${track.title}`,
-      timestamp: new Date()
-    };
-    const aiResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      type: 'ai',
-      content: `Great choice! ${track.title} is an excellent path. Let me assess your current skills to personalize your learning journey.`,
-      timestamp: new Date(),
-      component: <SkillAssessmentComponent onComplete={handleSkillAssessmentComplete} />
-    };
-    setMessages(prev => [...prev, userMessage, aiResponse]);
-    setCurrentStep('assessment');
+  const handleShowProgress = () => {
+    setIsLoading(true);
+    setActiveTab('progress');
+    
+    setTimeout(() => {
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: "Here's your current learning progress:",
+        timestamp: new Date(),
+        component: <ProgressDashboardComponent
+          onContinueLearning={handleContinueLearning}
+          onSelectTrack={(trackId: string) => handleContinueLearning()}
+        />
+      };
+      setTabMessages(prev => ({
+        ...prev,
+        progress: [...prev.progress, newMessage]
+      }));
+      setIsLoading(false);
+    }, 500);
   };
 
-  const handleSkillAssessmentComplete = (skills: SkillAssessment[]) => {
-    // Log assessment for now
-    console.log("Skill Assessment Completed:", skills);
-    const aiResponse: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: "Perfect! Now let's understand your learning preferences and goals to create the best experience for you.",
-      timestamp: new Date(),
-      component: <LearningPreferencesComponent onComplete={handlePreferencesComplete} />
-    };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('preferences');
+  const simulateAPICall = async (input: string): Promise<Message> => {
+    // Simulate network delay and potential failure
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    
+    // Simulate 10% failure rate for testing
+    if (Math.random() < 0.1 && retryCount < 2) {
+      throw new Error('Network connection failed. Please try again.');
+    }
+    
+    // Generate AI response based on input
+    if (input.toLowerCase().includes('progress')) {
+      throw new Error('Use progress button instead');
+    } else if (input.toLowerCase().includes('help')) {
+      return {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: "I'm here to help! What specific topic would you like assistance with?",
+        timestamp: new Date()
+      };
+    } else if (input.toLowerCase().includes('review')) {
+      return {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: "Let's start a review session:",
+        timestamp: new Date(),
+        component: <FlashcardReviewComponent onComplete={handleReviewComplete} />
+      };
+    } else {
+      return {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: "I understand you're interested in that topic. Let me help you with personalized guidance based on your learning path.",
+        timestamp: new Date()
+      };
+    }
   };
 
-  const handlePreferencesComplete = (preferences: any) => {
-    // Log preferences for now
-    console.log("Learning Preferences Completed:", preferences);
-    const aiResponse: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: "Excellent! I've created a personalized learning plan for you. Let's start with your first interactive lesson!",
-      timestamp: new Date(),
-      component: <InteractiveLessonComponent />
-    };
-    setMessages(prev => [...prev, aiResponse]);
-    setCurrentStep('learning');
+  const handleRetry = async (originalInput: string) => {
+    if (retryCount >= 2) {
+      setError('Unable to connect. Please check your connection and try again later.');
+      setIsLoading(false);
+      setIsTyping(false);
+      return;
+    }
+
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    
+    try {
+      setIsTyping(true);
+      const aiResponse = await simulateAPICall(originalInput);
+      
+      if (aiResponse.content.includes("review")) {
+        setActiveTab('review');
+      }
+      
+      addMessageToCurrentTab(aiResponse);
+      setRetryCount(0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
+    setIsLoading(true);
+    setError(null);
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
       content: inputValue,
       timestamp: new Date()
     };
-    setMessages(prev => [...prev, userMessage]);
+    
+    addMessageToCurrentTab(userMessage);
     const currentInput = inputValue;
     setInputValue('');
-
-    // Simulate AI response (mock API call)
-    setTimeout(() => {
-      let aiResponse: Message;
-      // Basic keyword-based responses for now
-      if (currentInput.toLowerCase().includes('progress')) {
-        aiResponse = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: "Here's your current learning progress across all tracks:",
-          timestamp: new Date(),
-          component: <ProgressDashboardComponent
-            onContinueLearning={handleContinueFromProgress}
-            onSelectTrack={handleSelectTrackFromProgress}
-          />
-        };
-        setCurrentStep('progress');
-        setActiveTab('progress');
-      } else if (currentInput.toLowerCase().includes('help')) {
-        aiResponse = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: "I'm here to help! What specific problem are you facing or what concept do you need clarification on?",
-          timestamp: new Date()
-        };
-      } else if (currentInput.toLowerCase().includes('next')) {
-        aiResponse = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: "Based on your progress, your next step is to dive deeper into React Hooks. Would you like to start that lesson now?",
-          timestamp: new Date(),
-          component: <InteractiveLessonComponent /> // Example: direct to a lesson
-        };
-        setCurrentStep('learning');
-      } else if (currentInput.toLowerCase().includes('review') || currentInput.toLowerCase().includes('flashcard')) {
-         aiResponse = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: "Perfect! Let's start a flashcard review session to reinforce your learning:",
-          timestamp: new Date(),
-          component: <FlashcardReviewComponent onComplete={handleReviewComplete} />
-        };
-        setCurrentStep('learning'); // or 'review'
+    
+    // Show typing indicator
+    setIsTyping(true);
+    
+    try {
+      const aiResponse = await simulateAPICall(currentInput);
+      
+      if (aiResponse.content.includes("review")) {
         setActiveTab('review');
-      } else {
-        aiResponse = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: `I received your message: "${currentInput}". How can I assist you further?`,
-          timestamp: new Date()
-        };
       }
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+      
+      addMessageToCurrentTab(aiResponse);
+      setRetryCount(0);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
+      setError(errorMessage);
+      
+      // Auto-retry for certain errors
+      if (errorMessage.includes('Network') && retryCount < 2) {
+        setTimeout(() => handleRetry(currentInput), 1500);
+        return;
+      }
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
-  const createAiMessageWithComponent = (content: string, component: React.ReactNode) => {
-    const aiMessage: Message = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: content,
-        timestamp: new Date(),
-        component: component,
-    };
-    setMessages(prev => [...prev, aiMessage]);
-  };
+  const quickActions = [
+    { 
+      icon: Zap, 
+      label: "Show Progress", 
+      action: handleShowProgress,
+      loading: isLoading && activeTab === 'progress'
+    },
+    { 
+      icon: Target, 
+      label: "Get Help", 
+      action: () => {
+        setInputValue("help");
+        handleSendMessage();
+      }
+    },
+    { 
+      icon: BookOpen, 
+      label: "What's Next?", 
+      action: () => {
+        setInputValue("what should I learn next?");
+        handleSendMessage();
+      }
+    },
+    { 
+      icon: Award, 
+      label: "Review Concepts", 
+      action: handleStartReview
+    }
+  ];
 
-
-  // --- JSX Structure ---
   return (
-    <div className="flex flex-col h-[700px] max-h-[80vh] w-full max-w-2xl mx-auto bg-background border border-border rounded-lg shadow-xl">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border">
-        <Avatar>
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            <Bot className="w-5 h-5" />
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h2 className="font-semibold text-foreground">AI Tutor</h2>
-          <p className="text-xs text-muted-foreground">Your personal learning assistant</p>
+    <div className="flex flex-col min-h-[600px] max-h-[calc(100vh-120px)] bg-white rounded-xl shadow-lg border">
+      {/* Chat Header */}
+      <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-xl">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <Brain className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg text-gray-900">AI Tutor</h2>
+            <p className="text-sm text-gray-600">Your personal learning assistant</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center text-sm text-red-500 bg-red-50 px-2 py-1 rounded-md"
+            >
+              <span>Connection issue</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setError(null)}
+                className="ml-2 h-4 w-4 p-0 text-red-500 hover:text-red-700"
+              >
+                ×
+              </Button>
+            </motion.div>
+          )}
+          {isTyping && !error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center text-sm text-gray-500"
+            >
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              AI is thinking...
+            </motion.div>
+          )}
+          <Badge variant="secondary" className={error ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}>
+            {error ? "Reconnecting..." : "Online"}
+          </Badge>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="border-b border-border">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-12 bg-transparent px-0">
-            <TabsTrigger
-              value="home"
-              className="flex-1 flex items-center justify-center gap-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none"
-              onClick={() => {
-                setActiveTab('home');
-                createAiMessageWithComponent("Welcome back to the Home screen! What would you like to do?", <HomePageComponent onStartNewTrack={handleStartNewTrack} onContinueLearning={handleContinueLearning} onStartReview={handleStartReview} />);
-                setCurrentStep('home');
-              }}
-            >
-              <Home className="w-4 h-4" />
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex-1 flex flex-col">
+        <div className="border-b px-6">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-50">
+            <TabsTrigger value="home" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
               Home
             </TabsTrigger>
-            <TabsTrigger
-              value="progress"
-              className="flex-1 flex items-center justify-center gap-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none"
-              onClick={() => {
-                setActiveTab('progress');
-                handleContinueLearning(); // This already creates a message with ProgressDashboardComponent
-              }}
-            >
-              <TrendingUp className="w-4 h-4" />
+            <TabsTrigger value="progress" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
               Progress
             </TabsTrigger>
-            <TabsTrigger
-              value="review"
-              className="flex-1 flex items-center justify-center gap-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none"
-              onClick={() => {
-                setActiveTab('review');
-                handleStartReview(); // This already creates a message with FlashcardReviewComponent
-              }}
-            >
-              <Brain className="w-4 h-4" />
+            <TabsTrigger value="review" className="flex items-center gap-2">
+              <RotateCcw className="h-4 w-4" />
               Review
             </TabsTrigger>
-            <TabsTrigger
-              value="explore"
-              className="flex-1 flex items-center justify-center gap-2 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-none"
-              onClick={() => {
-                setActiveTab('explore');
-                handleStartNewTrack(); // This already creates a message with TrackExplorationComponent
-              }}
-            >
-              <BookOpen className="w-4 h-4" />
+            <TabsTrigger value="explore" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
               Explore
             </TabsTrigger>
           </TabsList>
-        </Tabs>
-      </div>
+        </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-6">
-          <AnimatePresence initial={false}>
-            {messages.map((message) => (
-              <motion.div
-                key={message.id}
-                layout
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                transition={{ duration: 0.3, ease: "circOut" }}
-                className={`flex gap-3 items-end ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {message.type === 'ai' && (
-                  <Avatar className="w-8 h-8 self-start">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      <Bot className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div className={`max-w-[75%] flex flex-col ${message.type === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div
-                    className={`rounded-lg p-3 text-sm shadow-md ${
-                      message.type === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-none'
-                        : 'bg-muted text-foreground rounded-bl-none'
-                    }`}
-                  >
-                    <p>{message.content}</p>
-                  </div>
-                  {message.component && (
-                    <div className="mt-2 w-full max-w-md rounded-lg border border-border bg-card p-4 shadow-md">
-                      {message.component}
-                    </div>
+        {/* Messages Area for each tab */}
+        {['home', 'progress', 'review', 'explore'].map((tab) => (
+          <TabsContent key={tab} value={tab} className="flex-1 flex flex-col m-0 overflow-hidden">
+            <ScrollArea className="flex-1 p-6 h-0">
+              <div className="space-y-6">
+                <AnimatePresence>
+                  {tabMessages[tab as TabType].map((message) => (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} w-full`}
+                    >
+                      <div className={`flex items-start space-x-3 max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          <AvatarFallback className={message.type === 'user' ? 'bg-green-100 text-green-600 border-2 border-green-300' : 'bg-blue-100 text-blue-600'}>
+                            {message.type === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col space-y-2 min-w-0 flex-1">
+                          <Card className={`${message.type === 'user' ? 'bg-green-500 text-white border-2 border-green-400' : 'bg-gray-50'} shadow-sm`}>
+                            <CardContent className="p-3">
+                              <p className="text-sm leading-relaxed">{message.content}</p>
+                            </CardContent>
+                          </Card>
+                          {message.component && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.2 }}
+                              className="mt-2"
+                            >
+                              {message.component}
+                            </motion.div>
+                          )}
+                          <span className={`text-xs ${message.type === 'user' ? 'text-right text-white/70' : 'text-left text-gray-400'}`}>
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <div className="border-t bg-gray-50 p-4 flex-shrink-0">
+              <div className="flex items-center space-x-3 mb-3">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                  placeholder="Ask me anything..."
+                  className="flex-1 bg-white border-gray-200 focus:border-blue-500"
+                  disabled={isLoading}
+                />
+                <Button 
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() || isLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
                   )}
-                  <p className="text-xs text-muted-foreground mt-1 px-1">
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                {message.type === 'user' && (
-                  <Avatar className="w-8 h-8 self-start">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
-
-      {/* Input Area */}
-      <div className="p-4 border-t border-border bg-background">
-        <div className="flex items-center gap-2">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask me anything..."
-            className="flex-1"
-            aria-label="Chat input"
-          />
-          <Button onClick={handleSendMessage} size="icon" aria-label="Send message">
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Button variant="outline" size="sm" onClick={() => { setActiveTab('progress'); handleContinueLearning(); }}>
-            <TrendingUp className="w-3 h-3 mr-1.5" /> Show Progress
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setInputValue("I need help with this lesson")}>
-            Get Help
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setInputValue("What should I learn next?")}>
-            What's Next?
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => { setActiveTab('review'); handleStartReview(); }}>
-            <RotateCcw className="w-3 h-3 mr-1.5" /> Review Concepts
-          </Button>
-        </div>
-      </div>
+                </Button>
+              </div>
+              
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2 max-w-full overflow-x-auto">
+                {quickActions.map((action, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={action.action}
+                    disabled={isLoading}
+                    className="flex items-center space-x-2 bg-white hover:bg-gray-50"
+                  >
+                    {action.loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <action.icon className="h-4 w-4" />
+                    )}
+                    <span>{action.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };
 
-// Export default for page usage or if it's the main feature component
 export default AITutorChat;

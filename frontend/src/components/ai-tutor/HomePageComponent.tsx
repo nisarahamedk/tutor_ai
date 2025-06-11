@@ -8,4 +8,5 @@ const HomePageComponent = () => {
   );
 };
 
+export { HomePageComponent };
 export default HomePageComponent;
