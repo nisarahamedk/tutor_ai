@@ -23,8 +23,8 @@
 
 | Task ID | Task Name | Story Points | Status | Assignee | Dependencies |
 |---------|-----------|--------------|--------|----------|--------------|
-| TASK-001 | [Setup Testing Infrastructure for TDD](./tasks/task_001.md) | 3 | 🔴 | - | None |
-| TASK-002 | [Baseline Testing for Existing Components](./tasks/task_002.md) | 5 | 🔴 | - | TASK-001 |
+| TASK-001 | [Setup Testing Infrastructure for TDD](./tasks/task_001.md) | 3 | 🟢 | Claude Code | None |
+| TASK-002 | [Baseline Testing for Existing Components](./tasks/task_002.md) | 5 | 🟢 | Claude Code | TASK-001 |
 | TASK-003 | [Create Feature-Based Directory Structure](./tasks/task_003.md) | 2 | 🔴 | - | TASK-002 |
 | TASK-004 | [Install and Configure Zustand](./tasks/task_004.md) | 2 | 🔴 | - | TASK-003 |
 
