@@ -1,4 +1,4 @@
-import AITutorChat from '@/features/ai-tutor/AITutorChat';
+import { AITutorChat } from '@/ai-tutor'; // Updated to use the new alias and barrel file
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Brain, ArrowLeft } from 'lucide-react';
