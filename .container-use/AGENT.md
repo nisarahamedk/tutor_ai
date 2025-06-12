@@ -1,1 +1,1 @@
-No instructions found. Please look around the filesystem and update me
+Ubuntu environment with Node.js 20 for running the AI Tutor frontend tests. Contains npm, git, and the complete project source code. Change to the frontend directory and use 'npm test' to run unit tests, 'npm run test:e2e' for end-to-end tests, and 'npm run coverage' for coverage reports.
