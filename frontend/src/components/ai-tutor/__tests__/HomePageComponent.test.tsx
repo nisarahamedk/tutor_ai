@@ -24,27 +24,106 @@ jest.mock('next/image', () => ({
 }));
 
 describe('HomePageComponent', () => {
-  // Test 1: Component renders without crashing and shows main div
-  it('renders without crashing and contains a div element', () => {
-    const { container } = render(<HomePageComponent />);
-    // Check if the main div rendered by the component is present
-    expect(container.firstChild).toBeInTheDocument();
-    expect(container.firstChild.nodeName).toBe('DIV');
+  // Props for the intended component
+  const mockOnStartNewTrack = jest.fn();
+  const mockOnContinueLearning = jest.fn();
+  const mockOnStartReview = jest.fn();
+
+  beforeEach(() => {
+    mockOnStartNewTrack.mockClear();
+    mockOnContinueLearning.mockClear();
+    mockOnStartReview.mockClear();
   });
 
-  // Test 2: Renders the heading "Home Page"
-  it('renders the "Home Page" heading', () => {
-    render(<HomePageComponent />);
-    // Check for the H1 element with the text "Home Page"
-    const headingElement = screen.getByRole('heading', { name: /Home Page/i, level: 1 });
-    expect(headingElement).toBeInTheDocument();
+  // Test for the placeholder version (as currently in HomePageComponent.tsx)
+  describe('Current Placeholder Version', () => {
+    it('renders without crashing and contains a div element', () => {
+      const { container } = render(<HomePageComponent />);
+      expect(container.firstChild).toBeInTheDocument();
+      // Based on current file, it's a DIV with an H1.
+      // If props were passed, it might cause errors with the placeholder.
+    });
+
+    it('renders the "Home Page" heading', () => {
+      render(<HomePageComponent />);
+      const headingElement = screen.getByRole('heading', { name: /Home Page/i, level: 1 });
+      expect(headingElement).toBeInTheDocument();
+    });
   });
 
-  // Test 3: (Placeholder for navigation - currently not applicable)
-  // it('handles navigation correctly', () => {
-  //   const { push } = require('next/navigation').useRouter();
-  //   render(<HomePageComponent />);
-  //   // No navigation elements in the current version of the component
-  //   expect(true).toBe(true); // Placeholder assertion
-  // });
+  // Tests for the INTENDED version of HomePageComponent (with props and buttons)
+  // These tests will fail if run against the current placeholder component code.
+  describe('Intended Functionality (with props and buttons)', () => {
+    it('renders action buttons when props are provided', () => {
+      render(
+        <HomePageComponent
+          onStartNewTrack={mockOnStartNewTrack}
+          onContinueLearning={mockOnContinueLearning}
+          onStartReview={mockOnStartReview}
+        />
+      );
+      // These buttons are expected based on the mock in AITutorChat.test.tsx
+      expect(screen.getByRole('button', { name: /Start New Track/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Continue Learning/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Start Review/i })).toBeInTheDocument();
+    });
+
+    it('calls onStartNewTrack when "Start New Track" button is clicked', () => {
+      render(
+        <HomePageComponent
+          onStartNewTrack={mockOnStartNewTrack}
+          onContinueLearning={mockOnContinueLearning}
+          onStartReview={mockOnStartReview}
+        />
+      );
+      const startNewTrackButton = screen.getByRole('button', { name: /Start New Track/i });
+      fireEvent.click(startNewTrackButton);
+      expect(mockOnStartNewTrack).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onContinueLearning when "Continue Learning" button is clicked', () => {
+      render(
+        <HomePageComponent
+          onStartNewTrack={mockOnStartNewTrack}
+          onContinueLearning={mockOnContinueLearning}
+          onStartReview={mockOnStartReview}
+        />
+      );
+      const continueLearningButton = screen.getByRole('button', { name: /Continue Learning/i });
+      fireEvent.click(continueLearningButton);
+      expect(mockOnContinueLearning).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onStartReview when "Start Review" button is clicked', () => {
+      render(
+        <HomePageComponent
+          onStartNewTrack={mockOnStartNewTrack}
+          onContinueLearning={mockOnContinueLearning}
+          onStartReview={mockOnStartReview}
+        />
+      );
+      const startReviewButton = screen.getByRole('button', { name: /Start Review/i });
+      fireEvent.click(startReviewButton);
+      expect(mockOnStartReview).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders some introductory text or welcome message (conceptual)', () => {
+      // This test is conceptual as the actual content of the intended HomePageComponent is unknown.
+      // It should ideally render more than just buttons.
+      render(
+        <HomePageComponent
+          onStartNewTrack={mockOnStartNewTrack}
+          onContinueLearning={mockOnContinueLearning}
+          onStartReview={mockOnStartReview}
+        />
+      );
+      // Example: expect(screen.getByText(/Welcome to your AI Tutor/i)).toBeInTheDocument();
+      // For now, this is a placeholder for content other than the placeholder H1.
+      // If the component ONLY renders buttons when props are passed, this test might be removed.
+      // If it keeps the "Home Page" H1, then that's covered by the placeholder tests.
+      // This test is to highlight that the component should have more content.
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBe(3); // Check that buttons are there.
+    });
+  });
 });

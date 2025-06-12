@@ -38,118 +38,161 @@ jest.mock('lucide-react', () => ({
   Target: (props) => <svg data-testid="icon-target" {...props} />,
 }));
 
+// Mock the Slider component
+let mockSliderOnValueChangeCallback;
+jest.mock('@/components/ui/slider', () => ({
+  Slider: jest.fn(({ value, onValueChange, max, min, step }) => {
+    mockSliderOnValueChangeCallback = onValueChange; // Capture the callback
+    return (
+      <div role="slider" aria-valuenow={value[0]} aria-valuemin={min} aria-valuemax={max} data-testid="mock-slider">
+        Mock Slider
+      </div>
+    );
+  }),
+}));
 
 describe('LearningPreferencesComponent', () => {
   const mockOnComplete = jest.fn();
 
   beforeEach(() => {
     mockOnComplete.mockClear();
+    mockSliderOnValueChangeCallback = null;
   });
 
-  it('renders without crashing', () => {
+  it('renders main title as a heading and all sections correctly', () => {
     render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
-    expect(screen.getByText(/Learning Preferences/i)).toBeInTheDocument();
-  });
+    expect(screen.getByRole('heading', { name: /Learning Preferences/i })).toBeInTheDocument();
+    expect(screen.getByText(/Let's customize your learning experience/i)).toBeInTheDocument();
 
-  it('renders time availability slider', () => {
-    render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
-    expect(screen.getByText(/How many hours per week can you dedicate to learning?/i)).toBeInTheDocument(); // Changed from getByLabelText
+    // Time Availability
+    expect(screen.getByText(/How many hours per week can you dedicate to learning?/i)).toBeInTheDocument();
     expect(screen.getByRole('slider')).toBeInTheDocument();
-    expect(screen.getByText(/10 hours per week/i)).toBeInTheDocument(); // Default value
-  });
+    expect(screen.getByText("10 hours per week")).toBeInTheDocument(); // Default
 
-  it('renders learning style options', () => {
-    render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
-    expect(screen.getByText(/What's your learning style?/i)).toBeInTheDocument(); // Changed from getByLabelText
+    // Learning Style
+    expect(screen.getByText(/What's your learning style?/i)).toBeInTheDocument();
     expect(screen.getByText(/Visual Learner/i)).toBeInTheDocument();
-    expect(screen.getByText(/Hands-on Learner/i)).toBeInTheDocument();
-    expect(screen.getByText(/Reading\/Writing/i)).toBeInTheDocument();
-  });
+    expect(screen.getByTestId('icon-lightbulb')).toBeInTheDocument();
 
-  it('renders goal options', () => {
-    render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
-    expect(screen.getByText(/What are your goals?/i)).toBeInTheDocument(); // Changed from getByLabelText
+    // Goals
+    expect(screen.getByText(/What are your goals?/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Get a job as a developer/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Build personal projects/i })).toBeInTheDocument();
+    expect(screen.getAllByTestId('icon-target').length).toBeGreaterThan(0); // Checks Target icon is present for goals
   });
 
-  it('allows selecting a learning style', () => {
+  it('updates time availability text and value when slider changes', () => {
     render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
-    const visualLearnerCard = screen.getByText(/Visual Learner/i).closest('.cursor-pointer');
-    expect(visualLearnerCard).toBeInTheDocument();
-    fireEvent.click(visualLearnerCard);
-    // Check if the card gets the active class or some visual indication.
-    // For now, we'll verify this by checking if the onComplete prop is called with this style.
-    // The button should also become enabled if goals are also selected.
+    expect(screen.getByText("10 hours per week")).toBeInTheDocument();
+
+    // Simulate slider change using the captured callback
+    if (mockSliderOnValueChangeCallback) {
+      mockSliderOnValueChangeCallback([25]);
+    }
+    expect(screen.getByText("25 hours per week")).toBeInTheDocument();
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '25');
+
+    // Submit to check payload
+    // Need to select style and goals first for button to be enabled
+    fireEvent.click(screen.getByText(/Visual Learner/i).closest('.cursor-pointer'));
+    fireEvent.click(screen.getByRole('button', { name: /Learn for fun/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Start My Learning Journey/i }));
+
+    expect(mockOnComplete).toHaveBeenCalledWith(expect.objectContaining({ timeAvailability: 25 }));
   });
 
-  it('allows selecting goals', () => {
+  it('allows selecting one learning style and reflects selection visually', () => {
+    render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
+    const visualStyleCard = screen.getByText(/Visual Learner/i).closest('div.cursor-pointer');
+    const handsOnStyleCard = screen.getByText(/Hands-on Learner/i).closest('div.cursor-pointer');
+
+    fireEvent.click(visualStyleCard);
+    expect(visualStyleCard).toHaveClass('border-primary');
+    expect(handsOnStyleCard).not.toHaveClass('border-primary');
+
+    fireEvent.click(handsOnStyleCard);
+    expect(handsOnStyleCard).toHaveClass('border-primary');
+    expect(visualStyleCard).not.toHaveClass('border-primary');
+
+    // Submit to check payload
+    fireEvent.click(screen.getByRole('button', { name: /Learn for fun/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Start My Learning Journey/i }));
+    expect(mockOnComplete).toHaveBeenCalledWith(expect.objectContaining({ learningStyle: 'hands-on' }));
+  });
+
+  it('allows selecting and deselecting multiple goals and reflects selection visually', () => {
     render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
     const jobGoalButton = screen.getByRole('button', { name: /Get a job as a developer/i });
+    const projectGoalButton = screen.getByRole('button', { name: /Build personal projects/i });
+
+    // Select job goal
     fireEvent.click(jobGoalButton);
-    // We'll verify this by checking if onComplete is called with this goal.
-    // The button styling might change, but that's harder to assert without more specific selectors.
+    // Assuming 'variant="default"' adds a specific class like 'bg-primary' or similar not 'bg-slate-900' (depends on actual Button impl.)
+    // For ShadCN, active outline button might be `bg-accent text-accent-foreground`
+    // And default variant might be `bg-primary text-primary-foreground`
+    // We need to check the actual class names from the component's 'Button' variant implementation or use aria-pressed.
+    // For now, we check if it's NOT outline (default variant means selected)
+    expect(jobGoalButton).not.toHaveClass('border-border'); // Approximation for selected state (not outline)
+
+    // Select project goal
+    fireEvent.click(projectGoalButton);
+    expect(projectGoalButton).not.toHaveClass('border-border');
+
+    // Deselect job goal
+    fireEvent.click(jobGoalButton);
+    expect(jobGoalButton).toHaveClass('border-border'); // Approximation for outline state (deselected)
+
+    // Submit to check payload
+    fireEvent.click(screen.getByText(/Visual Learner/i).closest('.cursor-pointer'));
+    fireEvent.click(screen.getByRole('button', { name: /Start My Learning Journey/i }));
+    expect(mockOnComplete).toHaveBeenCalledWith(expect.objectContaining({ goals: ['Build personal projects'] }));
   });
 
-  it('submit button is disabled initially and enables after selections', () => {
+  it('submit button enables only when learning style and at least one goal are selected', () => {
     render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
     const submitButton = screen.getByRole('button', { name: /Start My Learning Journey/i });
+    const visualStyle = screen.getByText(/Visual Learner/i).closest('.cursor-pointer');
+    const jobGoal = screen.getByRole('button', { name: /Get a job as a developer/i });
+
     expect(submitButton).toBeDisabled();
 
-    // Select a learning style
-    const visualLearnerCard = screen.getByText(/Visual Learner/i).closest('.cursor-pointer');
-    fireEvent.click(visualLearnerCard);
-    expect(submitButton).toBeDisabled(); // Still disabled as goals are missing
+    fireEvent.click(visualStyle);
+    expect(submitButton).toBeDisabled(); // Only style selected
 
-    // Select a goal
-    const jobGoalButton = screen.getByRole('button', { name: /Get a job as a developer/i });
-    fireEvent.click(jobGoalButton);
-    expect(submitButton).toBeEnabled();
+    fireEvent.click(jobGoal);
+    expect(submitButton).toBeEnabled(); // Both selected
+
+    fireEvent.click(jobGoal); // Deselect goal
+    expect(submitButton).toBeDisabled(); // Goal deselected
   });
 
-  it('calls onComplete with selected preferences on submit', () => {
+  it('calls onComplete with all selected preferences on submit', () => {
     render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
 
-    // Set time availability (slider interaction is complex, we'll assume default or test separately if needed)
-    // For this test, we'll focus on style and goals which control button enablement.
-    // Default timeAvailability is 10.
+    // Set time (using mock)
+    if (mockSliderOnValueChangeCallback) mockSliderOnValueChangeCallback([15]);
 
-    // Select learning style
-    const handsOnStyle = screen.getByText(/Hands-on Learner/i).closest('.cursor-pointer');
-    fireEvent.click(handsOnStyle);
+    // Select style
+    fireEvent.click(screen.getByText(/Hands-on Learner/i).closest('.cursor-pointer'));
 
     // Select goals
-    const projectGoal = screen.getByRole('button', { name: /Build personal projects/i });
-    const funGoal = screen.getByRole('button', { name: /Learn for fun/i });
-    fireEvent.click(projectGoal);
-    fireEvent.click(funGoal);
+    fireEvent.click(screen.getByRole('button', { name: /Build personal projects/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Learn for fun/i }));
 
-    const submitButton = screen.getByRole('button', { name: /Start My Learning Journey/i });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: /Start My Learning Journey/i }));
 
     expect(mockOnComplete).toHaveBeenCalledTimes(1);
     expect(mockOnComplete).toHaveBeenCalledWith({
-      timeAvailability: 10, // Default slider value
+      timeAvailability: 15,
       learningStyle: 'hands-on',
       goals: ['Build personal projects', 'Learn for fun'],
     });
   });
-
-  it('updates time availability text when slider changes', () => {
-    render(<LearningPreferencesComponent onComplete={mockOnComplete} />);
-    const slider = screen.getByRole('slider');
-    // Note: Testing slider value change directly via fireEvent.change might be tricky
-    // depending on how the Slider component is implemented internally with Radix UI.
-    // A common way is to check the visual output if the component updates text based on slider value.
-    // The component does `setTimeAvailability` which updates `timeAvailability[0]`.
-    // We'll assume the Slider component calls `onValueChange` correctly.
-    // For now, we'll trust the default value is rendered and that `onValueChange` works if Slider is correctly implemented.
-    // A more involved test might involve `fireEvent.keyDown` on the slider thumb if it's focusable.
-    expect(screen.getByText("10 hours per week")).toBeInTheDocument();
-    // If we could get the onValueChange prop:
-    // const sliderInstance = ... // get the instance or props
-    // act(() => { sliderInstance.onValueChange([20]); });
-    // expect(screen.getByText("20 hours per week")).toBeInTheDocument();
-  });
-
 });
+
+// Helper to query within a specific element
+import { queries, within as rtlWithin } from '@testing-library/dom';
+
+function within(element) {
+  const customQueries = {};
+  return rtlWithin(element, { ...queries, ...customQueries });
+}
