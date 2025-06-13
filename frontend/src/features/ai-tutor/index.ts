@@ -7,6 +7,8 @@ export * from './types';
 // Services
 export { agUiService } from './services';
 
+// Server Actions (React 19)
+export * from './actions';
+
 // The following are not exported as their corresponding files were not found:
-// export * as aiTutorActions from './actions';
 // export * as aiTutorQueries from './queries';
