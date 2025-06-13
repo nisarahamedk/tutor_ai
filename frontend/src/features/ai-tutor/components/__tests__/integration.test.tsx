@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import AITutorChat from '@/features/ai-tutor/AITutorChat'; // Main component for integration tests
+import { AITutorChat } from '@/ai-tutor'; // Updated import
 import {
   navigateToAITutorTab,
   sendMessageInAITutor,

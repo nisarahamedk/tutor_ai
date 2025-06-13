@@ -25,13 +25,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 // Import previously created components
-import { HomePageComponent } from '@/components/ai-tutor/HomePageComponent';
-import { TrackExplorationComponent, LearningTrack } from '@/components/ai-tutor/TrackExplorationComponent';
-import { SkillAssessmentComponent, SkillAssessment } from '@/components/ai-tutor/SkillAssessmentComponent';
-import { LearningPreferencesComponent } from '@/components/ai-tutor/LearningPreferencesComponent';
-import { InteractiveLessonComponent } from '@/components/ai-tutor/InteractiveLessonComponent';
-import { ProgressDashboardComponent } from '@/components/ai-tutor/ProgressDashboardComponent';
-import { FlashcardReviewComponent } from '@/components/ai-tutor/FlashcardReviewComponent';
+// Updated to use the new path alias @/ai-tutor which points to frontend/src/features/ai-tutor/index.ts
+import {
+  HomePageComponent,
+  TrackExplorationComponent,
+  LearningTrack,
+  SkillAssessmentComponent,
+  SkillAssessment,
+  LearningPreferencesComponent,
+  InteractiveLessonComponent,
+  ProgressDashboardComponent,
+  FlashcardReviewComponent
+} from '@/ai-tutor';
 
 export interface Message {
   id: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import AITutorChat, { Message } from '../AITutorChat'; // Adjust path as needed
+import { AITutorChat, Message } from '@/ai-tutor'; // Updated import
 import { navigateToAITutorTab, sendMessageInAITutor } from '@/test-utils/ai-tutor-helpers';
 
 // Mock ResizeObserver (if Radix UI or similar is used)
@@ -59,55 +59,56 @@ jest.mock('framer-motion', () => {
 // Mock scrollIntoView for JSDOM
 Element.prototype.scrollIntoView = jest.fn();
 
-// Mock child components
-jest.mock('@/components/ai-tutor/HomePageComponent', () => ({
-  HomePageComponent: jest.fn(({ onStartNewTrack, onContinueLearning, onStartReview }) => (
-    <div data-testid="mock-homepage">
-      <button onClick={onStartNewTrack}>Start New Track</button>
-      <button onClick={onContinueLearning}>Continue Learning</button>
-      <button onClick={onStartReview}>Start Review</button>
-    </div>
-  )),
-}));
-jest.mock('@/components/ai-tutor/TrackExplorationComponent', () => ({
-  TrackExplorationComponent: jest.fn(({ onTrackSelect }) => (
-    <div data-testid="mock-trackexploration">
-      <button onClick={() => onTrackSelect({ id: 'test-track', title: 'Test Track' })}>Select Test Track</button>
-    </div>
-  )),
-}));
-jest.mock('@/components/ai-tutor/SkillAssessmentComponent', () => ({
-  SkillAssessmentComponent: jest.fn(({ onComplete }) => (
-    <div data-testid="mock-skillassessment">
-      <button onClick={() => onComplete([{ skill: 'test', level: 1 }])}>Complete Assessment</button>
-    </div>
-  )),
-}));
-jest.mock('@/components/ai-tutor/LearningPreferencesComponent', () => ({
-  LearningPreferencesComponent: jest.fn(({ onComplete }) => (
-    <div data-testid="mock-learningpreferences">
-      <button onClick={() => onComplete({ style: 'visual' })}>Complete Preferences</button>
-    </div>
-  )),
-}));
-jest.mock('@/components/ai-tutor/InteractiveLessonComponent', () => ({
-  InteractiveLessonComponent: jest.fn(() => <div data-testid="mock-interactivelesson">Lesson Content</div>),
-}));
-jest.mock('@/components/ai-tutor/ProgressDashboardComponent', () => ({
-  ProgressDashboardComponent: jest.fn(({ onContinueLearning, onSelectTrack }) => (
-    <div data-testid="mock-progressdashboard">
-      <button onClick={onContinueLearning}>Continue From Progress</button>
-      <button onClick={() => onSelectTrack('Test Track From Progress')}>Select Track From Progress</button>
-    </div>
-  )),
-}));
-jest.mock('@/components/ai-tutor/FlashcardReviewComponent', () => ({
-  FlashcardReviewComponent: jest.fn(({ onComplete }) => (
-    <div data-testid="mock-flashcardreview">
-      <button onClick={onComplete}>Complete Review</button>
-    </div>
-  )),
-}));
+// Mock child components now exported from @/ai-tutor
+jest.mock('@/ai-tutor', () => {
+  const actualAITutor = jest.requireActual('@/ai-tutor'); // Important to get actual exports
+
+  // Return a new object that includes all actual exports,
+  // then override specific ones with mocks.
+  // AITutorChat and Message are the components under test or types, so use actual.
+  return {
+    ...actualAITutor, // Spread all actual exports
+    AITutorChat: actualAITutor.AITutorChat, // Use actual AITutorChat (component being tested)
+    // Message is a type, it's part of AITutorChat's signature, usually doesn't need mocking here.
+    // If Message were an enum or object with static properties, you might need actualAITutor.Message.
+
+    // Mock specific components that are dependencies
+    HomePageComponent: jest.fn(({ onStartNewTrack, onContinueLearning, onStartReview }) => (
+      <div data-testid="mock-homepage">
+        <button onClick={onStartNewTrack}>Start New Track</button>
+        <button onClick={onContinueLearning}>Continue Learning</button>
+        <button onClick={onStartReview}>Start Review</button>
+      </div>
+    )),
+    TrackExplorationComponent: jest.fn(({ onTrackSelect }) => (
+      <div data-testid="mock-trackexploration">
+        <button onClick={() => onTrackSelect({ id: 'test-track', title: 'Test Track', description: 'Test desc', difficulty: 'Beginner', tags: [], contentModules: [] })}>Select Test Track</button>
+      </div>
+    )),
+    SkillAssessmentComponent: jest.fn(({ onComplete }) => (
+      <div data-testid="mock-skillassessment">
+        <button onClick={() => onComplete([{ skillId: 'skill1', skillName: 'Test Skill', level: 3, completed: true }])}>Complete Assessment</button>
+      </div>
+    )),
+    LearningPreferencesComponent: jest.fn(({ onComplete }) => (
+      <div data-testid="mock-learningpreferences">
+        <button onClick={() => onComplete({ learningStyle: 'visual', preferredTools: ['videos'], dailyGoal: 30 })}>Complete Preferences</button>
+      </div>
+    )),
+    InteractiveLessonComponent: jest.fn(() => <div data-testid="mock-interactivelesson">Lesson Content</div>),
+    ProgressDashboardComponent: jest.fn(({ onContinueLearning, onSelectTrack }) => (
+      <div data-testid="mock-progressdashboard">
+        <button onClick={onContinueLearning}>Continue From Progress</button>
+        <button onClick={() => onSelectTrack('Test Track From Progress')}>Select Track From Progress</button>
+      </div>
+    )),
+    FlashcardReviewComponent: jest.fn(({ onComplete }) => (
+      <div data-testid="mock-flashcardreview">
+        <button onClick={onComplete}>Complete Review</button>
+      </div>
+    )),
+  };
+});
 
 // Mock window.alert
 global.alert = jest.fn();
@@ -116,20 +117,15 @@ global.alert = jest.fn();
 describe('AITutorChat', () => {
   beforeEach(() => {
     (global.alert as jest.Mock).mockClear();
-    // Clear mocks for imported components if they have internal state or mock functions
-    jest.clearAllMocks();
-    // Reset tab-specific initial messages for HomePageComponent as it's modified by some tests
-    // This is a bit of a workaround; ideally, the component's initial state would be fully reset
-    // or the tests structured to not interfere.
-    // For now, this ensures HomePageComponent is present for tests that expect it.
-    const { HomePageComponent } = jest.requireMock('@/components/ai-tutor/HomePageComponent');
-    HomePageComponent.mockImplementation(({ onStartNewTrack, onContinueLearning, onStartReview }) => (
-      <div data-testid="mock-homepage">
-        <button onClick={onStartNewTrack}>Start New Track</button>
-        <button onClick={onContinueLearning}>Continue Learning</button>
-        <button onClick={onStartReview}>Start Review</button>
-      </div>
-    ));
+    jest.clearAllMocks(); // Clear all mocks
+
+    // Since HomePageComponent is now mocked via jest.mock('@/ai-tutor', ...),
+    // we need to ensure its mock implementation is reset or correctly re-established here if needed.
+    // The mock factory in jest.mock('@/ai-tutor') is called once.
+    // If tests modify the mock's behavior or return values, clear or reset those specific mocks.
+    // For example, if a test changes what HomePageComponent.mockReturnValueOnce(...) does.
+    // For this case, the mock factory provides fresh mocks each time, so jest.clearAllMocks() is key.
+    // The requireMock for HomePageComponent is no longer needed here as it's part of the bigger mock.
   });
 
   it('renders initial AI message with HomePageComponent on the Home tab', () => {
