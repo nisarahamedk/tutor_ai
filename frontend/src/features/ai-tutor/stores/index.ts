@@ -1,8 +1,40 @@
 // src/features/ai-tutor/stores/index.ts
-// Placeholder exports to prevent module resolution errors  
-// Add actual exports here when stores are added, e.g.:
-// export { useChatStore } from './chatStore';
-// export { useLearningStore } from './learningStore';
-// export { useUserStore } from './userStore';
+// Zustand store exports for AI Tutor feature
 
-export {}; // Empty export to make this a valid module
+// Chat store
+export { 
+  useChatStore, 
+  useChatSelectors, 
+  useChatActions 
+} from './chatStore';
+
+// Learning store
+export { 
+  useLearningStore, 
+  useLearningSelectors, 
+  useLearningActions 
+} from './learningStore';
+
+// User store
+export { 
+  useUserStore, 
+  useUserSelectors, 
+  useUserActions,
+  ACHIEVEMENTS,
+  ACHIEVEMENT_DESCRIPTIONS 
+} from './userStore';
+
+// Re-export types for convenience
+export type {
+  ChatState,
+  LearningState,
+  UserState,
+  TabType,
+  Message,
+  LearningTrack,
+  ProgressData,
+  SkillAssessment,
+  Flashcard,
+  LearningSession,
+  UserPreferences
+} from '../types';
