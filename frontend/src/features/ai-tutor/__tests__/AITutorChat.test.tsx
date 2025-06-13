@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { AITutorChat, Message } from '@/ai-tutor'; // Updated import
+import AITutorChat, { Message } from '@/features/ai-tutor/components/AITutorChat'; // Updated import
 import { navigateToAITutorTab, sendMessageInAITutor } from '@/test-utils/ai-tutor-helpers';
 
 // Mock ResizeObserver (if Radix UI or similar is used)

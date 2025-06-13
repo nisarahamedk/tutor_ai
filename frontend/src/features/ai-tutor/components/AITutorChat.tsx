@@ -24,19 +24,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-// Import previously created components
-// Updated to use the new path alias @/ai-tutor which points to frontend/src/features/ai-tutor/index.ts
-import {
-  HomePageComponent,
-  TrackExplorationComponent,
-  LearningTrack,
-  SkillAssessmentComponent,
-  SkillAssessment,
-  LearningPreferencesComponent,
-  InteractiveLessonComponent,
-  ProgressDashboardComponent,
-  FlashcardReviewComponent
-} from '@/ai-tutor';
+// Import previously created components - using direct imports to avoid circular dependencies
+import { HomePageComponent } from './HomePageComponent';
+import { TrackExplorationComponent, LearningTrack } from './learning/TrackExplorationComponent';
+import { SkillAssessmentComponent, SkillAssessment } from './learning/SkillAssessmentComponent';
+import { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
+import { InteractiveLessonComponent } from './learning/InteractiveLessonComponent';
+import { ProgressDashboardComponent } from './dashboard/ProgressDashboardComponent';
+import { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
 
 export interface Message {
   id: string;

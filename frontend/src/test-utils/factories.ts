@@ -1,8 +1,8 @@
 import React from 'react'; // Needed for React.ReactNode type in LearningTrack
-import { Message as AITutorMessage } from '@/features/ai-tutor/AITutorChat'; // For Message type
-import { LearningTrack as ExplorationLearningTrack } from '@/components/ai-tutor/TrackExplorationComponent';
-import { SkillAssessment } from '@/components/ai-tutor/SkillAssessmentComponent';
-import { Flashcard } from '@/components/ai-tutor/FlashcardReviewComponent'; // Assuming Flashcard interface is exported
+import { Message as AITutorMessage } from '@/features/ai-tutor/components/AITutorChat'; // For Message type
+import { LearningTrack as ExplorationLearningTrack } from '@/features/ai-tutor/components/learning/TrackExplorationComponent';
+import { SkillAssessment } from '@/features/ai-tutor/components/learning/SkillAssessmentComponent';
+import { Flashcard } from '@/features/ai-tutor/components/learning/FlashcardReviewComponent'; // Assuming Flashcard interface is exported
 
 // Consistent mock data factories
 
@@ -27,7 +27,7 @@ export const createMockLearningTrack = (overrides: Partial<ExplorationLearningTr
   id: `track-${Math.random().toString(36).substr(2, 9)}`,
   title: 'Default Test Track',
   description: 'A comprehensive description for the default test track.',
-  icon: <svg data-testid="mock-track-icon" />, // Default mock icon
+  icon: React.createElement('svg', { 'data-testid': 'mock-track-icon' }), // Default mock icon
   progress: 0,
   difficulty: 'Beginner',
   duration: '4 weeks',
