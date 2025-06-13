@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import AITutorChat, { Message as AITutorMessage } from '@/features/ai-tutor/AITutorChat';
+import { AITutorChat, Message as AITutorMessage } from '@/ai-tutor'; // Updated import
 
 // --- Standard Mocks ---
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
@@ -66,6 +66,26 @@ jest.mock('framer-motion', () => {
 Element.prototype.scrollIntoView = jest.fn();
 global.alert = jest.fn();
 
+// Mock child components now exported from @/ai-tutor
+jest.mock('@/ai-tutor', () => {
+  const actualAITutor = jest.requireActual('@/ai-tutor');
+  return {
+    ...actualAITutor, // Spread actual exports
+    AITutorChat: actualAITutor.AITutorChat, // Use actual AITutorChat for performance testing its rendering
+    // Message type is implicitly available via the import in the test file
+
+    // Simple mocks for child components to isolate AITutorChat's performance.
+    // These components are now also part of the '@/ai-tutor' module.
+    HomePageComponent: jest.fn(() => <div data-testid="mock-homepage">Mocked Home Page</div>),
+    TrackExplorationComponent: jest.fn(() => <div data-testid="mock-trackexploration">Mocked Track Exploration</div>),
+    SkillAssessmentComponent: jest.fn(() => <div data-testid="mock-skillassessment">Mocked Skill Assessment</div>),
+    LearningPreferencesComponent: jest.fn(() => <div data-testid="mock-learningpreferences">Mocked Learning Preferences</div>),
+    InteractiveLessonComponent: jest.fn(() => <div data-testid="mock-interactivelesson">Mocked Interactive Lesson</div>),
+    ProgressDashboardComponent: jest.fn(() => <div data-testid="mock-progressdashboard">Mocked Progress Dashboard</div>),
+    FlashcardReviewComponent: jest.fn(() => <div data-testid="mock-flashcardreview">Mocked Flashcard Review</div>),
+  };
+});
+
 // Mock child components as they are not the focus of AITutorChat's own performance
 // This helps isolate AITutorChat's rendering performance.
 // However, for "large data sets" test, we might need to allow messages to render.
@@ -73,28 +93,6 @@ global.alert = jest.fn();
 // AITutorChat renders messages itself, not through child components primarily.
 // Child components are usually for interactive elements within messages or static parts of tabs.
 // So, we mock them to prevent their own complex logic from interfering with AITutorChat's baseline render measurement.
-
-jest.mock('@/components/ai-tutor/HomePageComponent', () => ({
-  HomePageComponent: jest.fn(() => <div data-testid="mock-homepage">Mocked Home Page</div>),
-}));
-jest.mock('@/components/ai-tutor/TrackExplorationComponent', () => ({
-  TrackExplorationComponent: jest.fn(() => <div data-testid="mock-trackexploration">Mocked Track Exploration</div>),
-}));
-jest.mock('@/components/ai-tutor/SkillAssessmentComponent', () => ({
-  SkillAssessmentComponent: jest.fn(() => <div data-testid="mock-skillassessment">Mocked Skill Assessment</div>),
-}));
-jest.mock('@/components/ai-tutor/LearningPreferencesComponent', () => ({
-  LearningPreferencesComponent: jest.fn(() => <div data-testid="mock-learningpreferences">Mocked Learning Preferences</div>),
-}));
-jest.mock('@/components/ai-tutor/InteractiveLessonComponent', () => ({
-  InteractiveLessonComponent: jest.fn(() => <div data-testid="mock-interactivelesson">Mocked Interactive Lesson</div>),
-}));
-jest.mock('@/components/ai-tutor/ProgressDashboardComponent', () => ({
-  ProgressDashboardComponent: jest.fn(() => <div data-testid="mock-progressdashboard">Mocked Progress Dashboard</div>),
-}));
-jest.mock('@/components/ai-tutor/FlashcardReviewComponent', () => ({
-  FlashcardReviewComponent: jest.fn(() => <div data-testid="mock-flashcardreview">Mocked Flashcard Review</div>),
-}));
 
 // Mock API calls from AITutorChat itself (simulateAPICall)
 // AITutorChat uses an internal simulateAPICall. We can mock Math.random to control its behavior if needed,
