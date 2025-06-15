@@ -46,3 +46,12 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Generated files
+test-results.json
+*-IMPLEMENTATION-SUMMARY.md
+
+# Dummy/temp files
+dummy_test_dir*
+*temp*
+*.tmp
