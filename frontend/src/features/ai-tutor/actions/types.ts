@@ -20,4 +20,4 @@ export interface SendMessageRequest {
   timestamp: string;
 }
 
-export interface SendMessageResponse extends Message {}
+export type SendMessageResponse = Message;

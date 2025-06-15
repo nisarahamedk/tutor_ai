@@ -21,11 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 // Import previously created components - using direct imports to avoid circular dependencies
-import { HomePageComponent } from './HomePageComponent';
 import { TrackExplorationComponent, LearningTrack } from './learning/TrackExplorationComponent';
 import { SkillAssessmentComponent, SkillAssessment } from './learning/SkillAssessmentComponent';
 import { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
@@ -120,17 +119,6 @@ export const AITutorChat: React.FC = () => {
   };
 
   // Handler functions
-  const handleStartNewTrack = () => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: "Great! Let's explore learning tracks to find the perfect path for you:",
-      timestamp: new Date(),
-      component: <TrackExplorationComponent onTrackSelect={handleTrackSelection} />
-    };
-    addMessageToCurrentTab(newMessage);
-    setActiveTab('explore');
-  };
 
   const handleTrackSelection = (track: LearningTrack) => {
     const newMessage: Message = {
@@ -138,7 +126,7 @@ export const AITutorChat: React.FC = () => {
       type: 'ai',
       content: `Excellent choice! The ${track.title} track is perfect for your goals. Before we start, let me assess your current skill level:`,
       timestamp: new Date(),
-      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} trackId={track.id} />
+      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} />
     };
     addMessageToCurrentTab(newMessage);
   };
@@ -212,7 +200,7 @@ export const AITutorChat: React.FC = () => {
         timestamp: new Date(),
         component: <ProgressDashboardComponent
           onContinueLearning={handleContinueLearning}
-          onSelectTrack={(trackId: string) => handleContinueLearning()}
+          onSelectTrack={() => handleContinueLearning()}
         />
       };
       setTabMessages(prev => ({

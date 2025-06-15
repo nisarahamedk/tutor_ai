@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'; // Added Suspense and ensured React is imported
-import { AITutorChat } from '@/ai-tutor';
+import { AITutorChat } from '@/features/ai-tutor';
 import { LoadingSpinner } from '@/components/shared'; // Added LoadingSpinner import
 import Link from 'next/link'; // Keep existing imports if needed for layout
 import { Button } from '@/components/ui/button'; // Keep existing imports

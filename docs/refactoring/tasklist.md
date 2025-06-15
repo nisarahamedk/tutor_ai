@@ -36,7 +36,7 @@
 | Task ID | Task Name | Story Points | Status | Assignee | Dependencies |
 |---------|-----------|--------------|--------|----------|--------------|
 | TASK-005 | [Extract Chat Container Components (TDD)](./tasks/task_005.md) | 8 | 🟢 | Claude Code | TASK-004 |
-| TASK-006 | [Migrate to React 19 useActionState (TDD)](./tasks/task_006.md) | 6 | 🔴 | - | TASK-005 |
+| TASK-006 | [Migrate to React 19 useActionState (TDD)](./tasks/task_006.md) | 6 | 🟢 | Claude Code | TASK-005 |
 | TASK-007 | [Implement useOptimistic for Chat Messages (TDD)](./tasks/task_007.md) | 4 | 🔴 | - | TASK-006 |
 | TASK-008 | [Refactor Learning Components to Server Components (TDD)](./tasks/task_008.md) | 6 | 🔴 | - | TASK-005 |
 

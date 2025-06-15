@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send,
   Bot,
   User,
   Home,
@@ -29,7 +28,6 @@ import { useMessageAction } from '../hooks/useMessageAction';
 import type { TabType } from '../actions/types';
 
 // Import previously created components
-import { HomePageComponent } from './HomePageComponent';
 import { TrackExplorationComponent, LearningTrack } from './learning/TrackExplorationComponent';
 import { SkillAssessmentComponent, SkillAssessment } from './learning/SkillAssessmentComponent';
 import { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
@@ -37,7 +35,7 @@ import { InteractiveLessonComponent } from './learning/InteractiveLessonComponen
 import { ProgressDashboardComponent } from './dashboard/ProgressDashboardComponent';
 import { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
 
-export interface Message {
+export interface ChatMessage {
   id: string;
   type: 'user' | 'ai';
   content: string;
@@ -46,7 +44,7 @@ export interface Message {
 }
 
 // Tab-specific initial messages
-const getInitialMessages = (tab: TabType): Message[] => {
+const getInitialMessages = (tab: TabType): ChatMessage[] => {
   const baseMessage = {
     id: '1',
     type: 'ai' as const,
@@ -86,7 +84,7 @@ const getInitialMessages = (tab: TabType): Message[] => {
 
 export const AITutorChatWithActions: React.FC = () => {
   // Separate message states for each tab
-  const [tabMessages, setTabMessages] = useState<Record<TabType, Message[]>>({
+  const [tabMessages, setTabMessages] = useState<Record<TabType, ChatMessage[]>>({
     home: getInitialMessages('home'),
     progress: getInitialMessages('progress'),
     review: getInitialMessages('review'),
@@ -94,7 +92,6 @@ export const AITutorChatWithActions: React.FC = () => {
   });
   
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Use the new useActionState hook for message handling
@@ -115,7 +112,7 @@ export const AITutorChatWithActions: React.FC = () => {
   useEffect(() => {
     if (messageState.success && messageState.message) {
       // Convert server action response to local message format
-      const aiMessage: Message = {
+      const aiMessage: ChatMessage = {
         id: messageState.message.id,
         type: 'ai',
         content: messageState.message.content,
@@ -131,7 +128,7 @@ export const AITutorChatWithActions: React.FC = () => {
   }, [messageState.success, messageState.message, activeTab]);
 
   // Add message to current tab
-  const addMessageToCurrentTab = (message: Message) => {
+  const addMessageToCurrentTab = (message: ChatMessage) => {
     setTabMessages(prev => ({
       ...prev,
       [activeTab]: [...prev[activeTab], message]
@@ -139,25 +136,14 @@ export const AITutorChatWithActions: React.FC = () => {
   };
 
   // Handler functions - keeping existing functionality
-  const handleStartNewTrack = () => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: "Great! Let's explore learning tracks to find the perfect path for you:",
-      timestamp: new Date(),
-      component: <TrackExplorationComponent onTrackSelect={handleTrackSelection} />
-    };
-    addMessageToCurrentTab(newMessage);
-    setActiveTab('explore');
-  };
 
   const handleTrackSelection = (track: LearningTrack) => {
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
       content: `Excellent choice! The ${track.title} track is perfect for your goals. Before we start, let me assess your current skill level:`,
       timestamp: new Date(),
-      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} trackId={track.id} />
+      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} />
     };
     addMessageToCurrentTab(newMessage);
   };
@@ -165,7 +151,7 @@ export const AITutorChatWithActions: React.FC = () => {
   const handleAssessmentComplete = (skills: SkillAssessment[]) => {
     const avgLevel = skills.reduce((sum, skill) => sum + skill.level, 0) / skills.length;
     const levelText = avgLevel >= 4 ? 'advanced' : avgLevel >= 2.5 ? 'intermediate' : 'beginner';
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
       content: `Based on your assessment, you're at ${levelText} level. Now let's customize your learning experience:`,
@@ -176,7 +162,7 @@ export const AITutorChatWithActions: React.FC = () => {
   };
 
   const handlePreferencesComplete = () => {
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
       content: "Perfect! Your learning plan is ready. Let's start with an interactive lesson:",
@@ -187,7 +173,7 @@ export const AITutorChatWithActions: React.FC = () => {
   };
 
   const handleContinueLearning = () => {
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
       content: "Welcome back! Let's continue where you left off:",
@@ -198,7 +184,7 @@ export const AITutorChatWithActions: React.FC = () => {
   };
 
   const handleStartReview = () => {
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
       content: "Let's review what you've learned with some flashcards:",
@@ -210,7 +196,7 @@ export const AITutorChatWithActions: React.FC = () => {
   };
 
   const handleReviewComplete = () => {
-    const newMessage: Message = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'ai',
       content: "Great job on the review! You're making excellent progress. What would you like to do next?",
@@ -223,14 +209,14 @@ export const AITutorChatWithActions: React.FC = () => {
     setActiveTab('progress');
     
     setTimeout(() => {
-      const newMessage: Message = {
+      const newMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'ai',
         content: "Here's your current learning progress:",
         timestamp: new Date(),
         component: <ProgressDashboardComponent
           onContinueLearning={handleContinueLearning}
-          onSelectTrack={(trackId: string) => handleContinueLearning()}
+          onSelectTrack={() => handleContinueLearning()}
         />
       };
       setTabMessages(prev => ({
@@ -253,7 +239,7 @@ export const AITutorChatWithActions: React.FC = () => {
       label: "Get Help", 
       action: () => {
         // This will be handled by the server action
-        const helpMessage: Message = {
+        const helpMessage: ChatMessage = {
           id: Date.now().toString(),
           type: 'user',
           content: "help",
@@ -266,7 +252,7 @@ export const AITutorChatWithActions: React.FC = () => {
       icon: BookOpen, 
       label: "What's Next?", 
       action: () => {
-        const nextMessage: Message = {
+        const nextMessage: ChatMessage = {
           id: Date.now().toString(),
           type: 'user',
           content: "what should I learn next?",
@@ -411,7 +397,7 @@ export const AITutorChatWithActions: React.FC = () => {
                 className="w-full"
                 onMessageSent={(message) => {
                   // Add user message to current tab immediately
-                  const userMessage: Message = {
+                  const userMessage: ChatMessage = {
                     id: Date.now().toString(),
                     type: 'user',
                     content: message,

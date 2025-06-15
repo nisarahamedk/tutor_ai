@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, FormEvent, KeyboardEvent } from 'react';
+import React, { useRef, FormEvent, KeyboardEvent } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import type { MessageInputProps } from './types';
 

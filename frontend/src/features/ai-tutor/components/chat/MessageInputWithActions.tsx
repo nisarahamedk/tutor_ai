@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, FormEvent, KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, FormEvent, KeyboardEvent } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { useMessageAction } from '../../hooks/useMessageAction';
 import { useRetryMessage } from '../../hooks/useRetryMessage';

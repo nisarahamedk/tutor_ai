@@ -1,5 +1,5 @@
 // frontend/src/app/ai-tutor/progress/page.tsx
-import { ProgressDashboardComponent } from '@/ai-tutor';
+import { ProgressDashboardComponent } from '@/features/ai-tutor';
 import React from 'react'; // Ensure React is imported for JSX
 
 // Placeholder for data fetching logic
@@ -20,7 +20,8 @@ const fetchUserProgress = async () => {
 };
 
 export default async function ProgressPage() {
-  const progressData = await fetchUserProgress();
+  // Data fetching can be added when the component supports it
+  // const progressData = await fetchUserProgress();
 
   return (
     <div className="container mx-auto p-4">
@@ -36,7 +37,10 @@ export default async function ProgressPage() {
                // etc.
              />
       */}
-      <ProgressDashboardComponent progressData={progressData} />
+      <ProgressDashboardComponent 
+        onContinueLearning={() => console.log('Continue learning')}
+        onSelectTrack={(trackName) => console.log('Selected track:', trackName)}
+      />
     </div>
   );
 }
