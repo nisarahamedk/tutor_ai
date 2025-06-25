@@ -24,6 +24,18 @@ export {
   ACHIEVEMENT_DESCRIPTIONS 
 } from './userStore';
 
+// Comprehensive Learning Store (TASK-010)
+export { 
+  default as useComprehensiveLearningStore 
+} from './comprehensiveLearningStore';
+
+export {
+  useLearningSelectors as useComprehensiveLearningSelectors,
+  useLearningActions as useComprehensiveLearningActions,
+  useComputedLearningData,
+  useLearningPerformanceMetrics
+} from '../hooks/useLearningSelectors';
+
 // Re-export types for convenience
 export type {
   ChatState,
@@ -38,3 +50,22 @@ export type {
   LearningSession,
   UserPreferences
 } from '../types';
+
+// Re-export comprehensive learning types
+export type {
+  ComprehensiveLearningState,
+  TrackProgress,
+  LessonProgress,
+  AssessmentResult,
+  LearningPreferences,
+  Achievement,
+  LearningGoal,
+  LearningStats,
+  StreakInfo,
+  WeeklyProgress,
+  LearningRecommendation,
+  SkillProgression,
+  LearningAnalytics,
+  OfflineAction,
+  SyncStatus
+} from '../types/learning';

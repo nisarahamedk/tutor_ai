@@ -1,9 +1,33 @@
 // src/features/ai-tutor/hooks/index.ts
-// Placeholder exports to prevent module resolution errors
-// Add actual exports here when hooks are added, e.g.:
-// export { useChatManager } from './useChatManager';
-// export { useLearningProgress } from './useLearningProgress';
-// export { useFlashcardReview } from './useFlashcardReview';
-// export { useSkillAssessment } from './useSkillAssessment';
 
-export {}; // Empty export to make this a valid module
+// Existing hooks
+export { useMessageAction } from './useMessageAction';
+export { useRetryMessage } from './useRetryMessage';
+
+// TASK-007 Optimistic hooks
+export { useOptimisticRetry } from './useOptimisticRetry';
+export { 
+  useBatchOptimistic,
+  createOptimisticMessage,
+  toOptimisticMessage,
+  isOptimisticMessage,
+  getPendingMessages,
+  getFailedMessages,
+  countMessagesByStatus
+} from './useBatchOptimistic';
+
+// TASK-010 Learning store selectors
+export { useLearningSelectors, useLearningActions, useComputedLearningData, useLearningPerformanceMetrics } from './useLearningSelectors';
+
+// TASK-009 Chat store selectors
+export { useChatSelectors, useChatActions, useMessageDisplay, useMessageInput, useTabManager } from './useChatSelectors';
+
+// TASK-011 Business Logic Hooks
+export * from './business';
+export * from './utils';
+
+// Hook return types
+export type { 
+  UseOptimisticRetryResult,
+  UseBatchOptimisticResult
+} from '../components/chat/types';

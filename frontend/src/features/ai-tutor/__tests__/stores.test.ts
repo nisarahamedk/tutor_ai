@@ -109,20 +109,20 @@ describe('Zustand Stores', () => {
       const store = useChatStore.getState();
       
       store.setLoading(true);
-      expect(store.isLoading).toBe(true);
+      expect(useChatStore.getState().isLoading).toBe(true);
       
       store.setLoading(false);
-      expect(store.isLoading).toBe(false);
+      expect(useChatStore.getState().isLoading).toBe(false);
     });
 
     it('should handle error state', () => {
       const store = useChatStore.getState();
       
       store.setError('Test error');
-      expect(store.error).toBe('Test error');
+      expect(useChatStore.getState().error).toBe('Test error');
       
       store.setError(null);
-      expect(store.error).toBe(null);
+      expect(useChatStore.getState().error).toBe(null);
     });
 
     it('should correctly identify tabs with user messages', () => {
@@ -151,8 +151,11 @@ describe('Zustand Stores', () => {
       
       store.addMessage('home', message);
       
-      const lastMessage = store.getLastMessage('home');
-      expect(lastMessage).toEqual(message);
+      const lastMessage = useChatStore.getState().getLastMessage('home');
+      // Since getCombinedMessages converts timestamps to Date objects, we need to compare appropriately
+      expect(lastMessage?.content).toBe(message.content);
+      expect(lastMessage?.type).toBe(message.type);
+      expect(lastMessage?.id).toBe(message.id);
     });
   });
 

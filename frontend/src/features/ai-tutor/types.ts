@@ -12,6 +12,22 @@ export interface Message {
   component?: React.ReactNode;
 }
 
+// Optimistic message types for TASK-009 integration
+export type MessageStatus = 'pending' | 'sent' | 'failed';
+
+export interface OptimisticMessage {
+  id: string;
+  type: 'user' | 'ai';
+  content: string;
+  timestamp: Date;
+  status: MessageStatus;
+  tempId?: string; // Temporary ID for optimistic updates
+  error?: string; // Error message if failed
+  retrying?: boolean; // If message is being retried
+  component?: React.ReactNode;
+  metadata?: Record<string, any>;
+}
+
 export interface LearningTrack {
   id: string;
   title: string;
@@ -92,7 +108,12 @@ export interface ChatState {
   tabMessages: Record<TabType, Message[]>;
   activeTab: TabType;
   isLoading: boolean;
+  isTyping: boolean;
   error: string | null;
+  
+  // Optimistic state
+  optimisticMessages: Record<TabType, OptimisticMessage[]>;
+  retryCount: number;
   
   // Actions
   addMessage: (tab: TabType, message: Message) => void;
@@ -100,13 +121,28 @@ export interface ChatState {
   clearMessages: (tab: TabType) => void;
   setActiveTab: (tab: TabType) => void;
   setLoading: (loading: boolean) => void;
+  setTyping: (typing: boolean) => void;
   setError: (error: string | null) => void;
+  
+  // Optimistic actions
+  addOptimisticMessage: (tab: TabType, message: OptimisticMessage) => void;
+  updateOptimisticMessage: (tab: TabType, tempId: string, updates: Partial<OptimisticMessage>) => void;
+  removeOptimisticMessage: (tab: TabType, tempId: string) => void;
+  clearOptimisticMessages: (tab: TabType) => void;
+  
+  // Combined actions (optimistic + regular)
+  sendMessageWithOptimistic: (tab: TabType, content: string, component?: React.ReactNode) => Promise<void>;
+  retryMessage: (tab: TabType, message: OptimisticMessage) => Promise<void>;
   
   // Selectors
   getTabMessages: (tab: TabType) => Message[];
+  getOptimisticMessages: (tab: TabType) => OptimisticMessage[];
+  getCombinedMessages: (tab: TabType) => (Message | OptimisticMessage)[];
   hasMessages: (tab: TabType) => boolean;
   getMessageCount: (tab: TabType) => number;
   getLastMessage: (tab: TabType) => Message | null;
+  getPendingCount: (tab: TabType) => number;
+  getFailedCount: (tab: TabType) => number;
 }
 
 export interface LearningState {

@@ -37,8 +37,8 @@
 |---------|-----------|--------------|--------|----------|--------------|
 | TASK-005 | [Extract Chat Container Components (TDD)](./tasks/task_005.md) | 8 | 🟢 | Claude Code | TASK-004 |
 | TASK-006 | [Migrate to React 19 useActionState (TDD)](./tasks/task_006.md) | 6 | 🟢 | Claude Code | TASK-005 |
-| TASK-007 | [Implement useOptimistic for Chat Messages (TDD)](./tasks/task_007.md) | 4 | 🔴 | - | TASK-006 |
-| TASK-008 | [Refactor Learning Components to Server Components (TDD)](./tasks/task_008.md) | 6 | 🔴 | - | TASK-005 |
+| TASK-007 | [Implement useOptimistic for Chat Messages (TDD)](./tasks/task_007.md) | 4 | 🟢 | Claude Code | TASK-006 |
+| TASK-008 | [Refactor Learning Components to Server Components (TDD)](./tasks/task_008.md) | 6 | 🟢 | Claude Code | TASK-005 |
 
 ---
 
@@ -47,8 +47,8 @@
 
 | Task ID | Task Name | Story Points | Status | Assignee | Dependencies |
 |---------|-----------|--------------|--------|----------|--------------|
-| TASK-009 | [Migrate Chat State to Zustand (TDD)](./tasks/task_009.md) | 5 | 🔴 | - | TASK-007 |
-| TASK-010 | [Create Learning Progress Store (TDD)](./tasks/task_010.md) | 4 | 🔴 | - | TASK-008 |
+| TASK-009 | [Migrate Chat State to Zustand (TDD)](./tasks/task_009.md) | 5 | 🟢 | Claude Code | TASK-007 |
+| TASK-010 | [Create Learning Progress Store (TDD)](./tasks/task_010.md) | 4 | 🟢 | Claude Code | TASK-008 |
 | TASK-011 | [Implement Custom Hooks for Business Logic (TDD)](./tasks/task_011.md) | 6 | 🔴 | - | TASK-009, TASK-010 |
 
 ---
