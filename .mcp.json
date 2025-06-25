@@ -7,6 +7,14 @@
         "@playwright/mcp@latest"
       ],
       "env": {}
+    },
+    "taskmaster": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/mcps/claude-task-master/mcp-server/server.js"
+      ],
+      "env": {}
     }
   }
 }
