@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useChatStore, useLearningStore, useUserStore } from '../stores';
-import type { Message, LearningTrack, UserPreferences } from '../types';
+import type { Message, LearningTrack } from '../types';
 
 // Store testing utilities
 const createMockMessage = (content: string, type: 'user' | 'ai' = 'user'): Message => ({
@@ -212,7 +212,7 @@ describe('Zustand Stores', () => {
       expect(store.currentSession).toBeDefined();
       expect(store.currentSession?.trackId).toBe('test-track');
       
-      store.endSession(85, 'Great session!');
+      store.endSession();
       
       expect(store.currentSession).toBe(null);
       expect(store.progress['test-track']).toBeDefined();
@@ -403,7 +403,7 @@ describe('Zustand Stores', () => {
       chatStore.addMessage('explore', createMockMessage('This track covers...', 'ai'));
       
       // Complete session and add achievement
-      learningStore.endSession(95, 'Excellent work!');
+      learningStore.endSession();
       userStore.addAchievement('first-lesson');
       
       // Verify integrated state

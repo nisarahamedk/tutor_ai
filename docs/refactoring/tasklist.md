@@ -49,7 +49,7 @@
 |---------|-----------|--------------|--------|----------|--------------|
 | TASK-009 | [Migrate Chat State to Zustand (TDD)](./tasks/task_009.md) | 5 | 🟢 | Claude Code | TASK-007 |
 | TASK-010 | [Create Learning Progress Store (TDD)](./tasks/task_010.md) | 4 | 🟢 | Claude Code | TASK-008 |
-| TASK-011 | [Implement Custom Hooks for Business Logic (TDD)](./tasks/task_011.md) | 6 | 🔴 | - | TASK-009, TASK-010 |
+| TASK-011 | [Implement Custom Hooks for Business Logic (TDD)](./tasks/task_011.md) | 6 | 🟢 | Claude Code | TASK-009, TASK-010 |
 
 ---
 
@@ -58,9 +58,9 @@
 
 | Task ID | Task Name | Story Points | Status | Assignee | Dependencies |
 |---------|-----------|--------------|--------|----------|--------------|
-| TASK-012 | [Implement Server Actions for FastAPI Integration (TDD)](./tasks/task_012.md) | 7 | 🔴 | - | TASK-011 |
-| TASK-013 | [Add Request/Response Validation (TDD)](./tasks/task_013.md) | 4 | 🔴 | - | TASK-012 |
-| TASK-014 | [Implement Caching Strategy (TDD)](./tasks/task_014.md) | 5 | 🔴 | - | TASK-013 |
+| TASK-012 | [Implement Server Actions for FastAPI Integration (TDD)](./tasks/task_012.md) | 7 | 🟢 | Claude Code | TASK-011 |
+| TASK-013 | [Add Request/Response Validation (TDD)](./tasks/task_013.md) | 4 | 🟢 | Claude Code | TASK-012 |
+| TASK-014 | [Implement Caching Strategy (TDD)](./tasks/task_014.md) | 5 | 🟢 | Claude Code | TASK-013 |
 
 ---
 
@@ -69,9 +69,9 @@
 
 | Task ID | Task Name | Story Points | Status | Assignee | Dependencies |
 |---------|-----------|--------------|--------|----------|--------------|
-| TASK-015 | [Performance Optimization (TDD)](./tasks/task_015.md) | 6 | 🔴 | - | TASK-014 |
-| TASK-016 | [Comprehensive E2E Testing (TDD)](./tasks/task_016.md) | 8 | 🔴 | - | TASK-014 |
-| TASK-017 | [Accessibility & Mobile Optimization (TDD)](./tasks/task_017.md) | 5 | 🔴 | - | TASK-015 |
+| TASK-015 | [Performance Optimization (TDD)](./tasks/task_015.md) | 6 | 🟢 | Claude Code | TASK-014 |
+| TASK-016 | [Comprehensive E2E Testing (TDD)](./tasks/task_016.md) | 8 | 🟢 | Claude Code | TASK-014 |
+| TASK-017 | [Accessibility & Mobile Optimization (TDD)](./tasks/task_017.md) | 5 | 🟢 | Claude Code | TASK-015 |
 
 ---
 
@@ -80,8 +80,8 @@
 
 | Task ID | Task Name | Story Points | Status | Assignee | Dependencies |
 |---------|-----------|--------------|--------|----------|--------------|
-| TASK-018 | [Update Documentation and Guidelines](./tasks/task_018.md) | 4 | 🔴 | - | TASK-017 |
-| TASK-019 | [Performance Monitoring and Analytics](./tasks/task_019.md) | 3 | 🔴 | - | TASK-017 |
+| TASK-018 | [Update Documentation and Guidelines](./tasks/task_018.md) | 4 | 🟢 | Claude Code | TASK-017 |
+| TASK-019 | [Performance Monitoring and Analytics](./tasks/task_019.md) | 3 | 🟢 | Claude Code | TASK-017 |
 
 ---
 
