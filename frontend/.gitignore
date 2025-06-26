@@ -58,8 +58,11 @@ dummy_test_dir*
 *temp*
 *.tmp
 
-# Claude commands (local only)
+# Claude commands (local only) 
 ../.claude/
+
+# Claude local settings (keep in repo for development)
+# .claude/ - commented out to keep Claude config in repo
 
 # Demo and stub files (not production ready)
 src/**/*demo*.tsx
