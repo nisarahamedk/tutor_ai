@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AITutorChatWithStore } from '../AITutorChatWithStore';
-import { useChatStore } from '../../stores/chatStore';
+import { useChatStore, useMessageDisplay, useMessageInput, useTabManager, useChatActions } from '../../stores/chatStore';
 
 // Mock the store
 vi.mock('../../stores/chatStore', () => ({
@@ -14,7 +14,7 @@ vi.mock('../../stores/chatStore', () => ({
 
 // Mock the external components
 vi.mock('../learning/TrackExplorationComponent', () => ({
-  TrackExplorationComponent: ({ onTrackSelect }: any) => (
+  TrackExplorationComponent: ({ onTrackSelect }: { onTrackSelect: (track: { id: string; title: string }) => void }) => (
     <div data-testid="track-exploration">
       <button onClick={() => onTrackSelect({ id: 'test', title: 'Test Track' })}>
         Select Track
@@ -24,7 +24,7 @@ vi.mock('../learning/TrackExplorationComponent', () => ({
 }));
 
 vi.mock('../learning/SkillAssessmentComponent', () => ({
-  SkillAssessmentComponent: ({ onComplete }: any) => (
+  SkillAssessmentComponent: ({ onComplete }: { onComplete: (results: unknown[]) => void }) => (
     <div data-testid="skill-assessment">
       <button onClick={() => onComplete([{ level: 3 }])}>Complete Assessment</button>
     </div>
@@ -32,7 +32,7 @@ vi.mock('../learning/SkillAssessmentComponent', () => ({
 }));
 
 vi.mock('../dashboard/LearningPreferencesComponent', () => ({
-  LearningPreferencesComponent: ({ onComplete }: any) => (
+  LearningPreferencesComponent: ({ onComplete }: { onComplete: () => void }) => (
     <div data-testid="learning-preferences">
       <button onClick={() => onComplete()}>Save Preferences</button>
     </div>
@@ -46,7 +46,7 @@ vi.mock('../learning/InteractiveLessonComponent', () => ({
 }));
 
 vi.mock('../dashboard/ProgressDashboardComponent', () => ({
-  ProgressDashboardComponent: ({ onContinueLearning, onSelectTrack }: any) => (
+  ProgressDashboardComponent: ({ onContinueLearning, onSelectTrack }: { onContinueLearning: () => void; onSelectTrack: () => void }) => (
     <div data-testid="progress-dashboard">
       <button onClick={onContinueLearning}>Continue Learning</button>
       <button onClick={onSelectTrack}>Select Track</button>
@@ -55,7 +55,7 @@ vi.mock('../dashboard/ProgressDashboardComponent', () => ({
 }));
 
 vi.mock('../learning/FlashcardReviewComponent', () => ({
-  FlashcardReviewComponent: ({ onComplete }: any) => (
+  FlashcardReviewComponent: ({ onComplete }: { onComplete: () => void }) => (
     <div data-testid="flashcard-review">
       <button onClick={() => onComplete()}>Complete Review</button>
     </div>
@@ -112,11 +112,9 @@ describe('AITutorChatWithStore', () => {
     vi.clearAllMocks();
     
     // Mock the hook returns
-    (vi.mocked(useChatStore) as any).mockReturnValue(mockStoreState);
+    vi.mocked(useChatStore).mockReturnValue(mockStoreState);
     
     // Mock the custom hooks
-    const { useMessageDisplay, useMessageInput, useTabManager, useChatActions } = 
-      require('../../stores/chatStore');
     
     vi.mocked(useMessageDisplay).mockReturnValue({
       messages: [mockStoreState.tabMessages.home[0]],
@@ -258,7 +256,6 @@ describe('AITutorChatWithStore', () => {
 
   it('should display loading state correctly', () => {
     // Mock loading state
-    const { useMessageInput } = require('../../stores/chatStore');
     vi.mocked(useMessageInput).mockReturnValue({
       activeTab: 'home',
       sendMessage: mockActions.sendMessage,
@@ -276,7 +273,6 @@ describe('AITutorChatWithStore', () => {
 
   it('should display typing indicator', () => {
     // Mock typing state
-    const { useMessageInput } = require('../../stores/chatStore');
     vi.mocked(useMessageInput).mockReturnValue({
       activeTab: 'home',
       sendMessage: mockActions.sendMessage,
@@ -293,7 +289,6 @@ describe('AITutorChatWithStore', () => {
 
   it('should display error state correctly', () => {
     // Mock error state
-    const { useMessageInput } = require('../../stores/chatStore');
     vi.mocked(useMessageInput).mockReturnValue({
       activeTab: 'home',
       sendMessage: mockActions.sendMessage,
@@ -311,7 +306,6 @@ describe('AITutorChatWithStore', () => {
 
   it('should show pending/failed message indicators on tabs', () => {
     // Mock tab stats with pending/failed messages
-    const { useTabManager } = require('../../stores/chatStore');
     vi.mocked(useTabManager).mockReturnValue({
       activeTab: 'home',
       setActiveTab: mockActions.setActiveTab,
@@ -330,7 +324,6 @@ describe('AITutorChatWithStore', () => {
   describe('Component Integration Tests', () => {
     it('should handle track selection workflow', async () => {
       // Mock with explore tab active and track exploration component
-      const { useMessageDisplay } = require('../../stores/chatStore');
       vi.mocked(useMessageDisplay).mockReturnValue({
         messages: [{
           id: 'explore-msg',
@@ -386,7 +379,6 @@ describe('AITutorChatWithStore', () => {
 
     it('should handle optimistic message retry', async () => {
       // Mock failed message
-      const { useMessageDisplay } = require('../../stores/chatStore');
       vi.mocked(useMessageDisplay).mockReturnValue({
         messages: [{
           id: 'failed-msg',

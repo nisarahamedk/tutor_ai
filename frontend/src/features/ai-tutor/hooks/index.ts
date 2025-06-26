@@ -19,8 +19,8 @@ export {
 // TASK-010 Learning store selectors
 export { useLearningSelectors, useLearningActions, useComputedLearningData, useLearningPerformanceMetrics } from './useLearningSelectors';
 
-// TASK-009 Chat store selectors
-export { useChatSelectors, useChatActions, useMessageDisplay, useMessageInput, useTabManager } from './useChatSelectors';
+// TASK-009 Chat store selectors (only export what exists)
+export * from './useChatSelectors';
 
 // TASK-011 Business Logic Hooks
 export * from './business';

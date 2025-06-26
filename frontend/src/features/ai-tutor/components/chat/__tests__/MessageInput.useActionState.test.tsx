@@ -21,12 +21,10 @@ vi.mock('lucide-react', () => ({
   Loader2: ({ ...props }) => <div data-testid="loader-icon" {...props} />,
 }));
 
-import { useActionState } from 'react';
 import { useMessageAction } from '../../hooks/useMessageAction';
 import { MessageInputWithActions } from '../MessageInputWithActions';
 
-const mockUseActionState = useActionState as any;
-const mockUseMessageAction = useMessageAction as any;
+const mockUseMessageAction = useMessageAction as jest.MockedFunction<typeof useMessageAction>;
 
 describe('MessageInputWithActions (useActionState Integration)', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChatStore, useMessageDisplay, useMessageInput, useTabManager } from '../../stores/chatStore';
 import type { TabType } from '../../types';

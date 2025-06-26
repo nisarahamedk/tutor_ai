@@ -1,5 +1,6 @@
 // src/features/ai-tutor/hooks/utils/useErrorBoundary.ts
 // Error Boundary and Recovery Utility Hook
+'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
@@ -136,7 +137,11 @@ export const useErrorBoundary = (): ErrorBoundaryReturn => {
         id: 'refresh',
         label: 'Refresh Page',
         description: 'Reload the page to get the latest version',
-        action: () => window.location.reload(),
+        action: () => {
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        },
         severity: 'medium'
       });
     }
@@ -148,13 +153,15 @@ export const useErrorBoundary = (): ErrorBoundaryReturn => {
         label: 'Clear Cache',
         description: 'Clear browser cache and reload',
         action: async () => {
-          if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map(name => caches.delete(name)));
+          if (typeof window !== 'undefined') {
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map(name => caches.delete(name)));
+            }
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
           }
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.reload();
         },
         severity: 'medium'
       });
@@ -167,7 +174,9 @@ export const useErrorBoundary = (): ErrorBoundaryReturn => {
         label: 'Go to Home',
         description: 'Return to the home page',
         action: () => {
-          window.location.href = '/';
+          if (typeof window !== 'undefined') {
+            window.location.href = '/';
+          }
         },
         severity: 'low'
       });
@@ -184,8 +193,8 @@ export const useErrorBoundary = (): ErrorBoundaryReturn => {
           message: error.message,
           stack: error.stack,
           timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          url: window.location.href
+          userAgent: typeof window !== 'undefined' && navigator?.userAgent || 'unknown',
+          url: typeof window !== 'undefined' ? window.location.href : 'unknown'
         };
         
         console.log('Support request:', errorDetails);
@@ -258,7 +267,7 @@ export const useAsyncError = () => {
 export const useAsyncWrapper = () => {
   const handleAsyncError = useAsyncError();
   
-  return useCallback(<T extends (...args: any[]) => Promise<any>>(
+  return useCallback(<T extends (...args: unknown[]) => Promise<unknown>>(
     asyncFunction: T
   ): T => {
     return (async (...args: Parameters<T>) => {
@@ -279,6 +288,8 @@ export const useGlobalErrorHandler = () => {
   const { reportError } = useErrorBoundary();
   
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     // Handle unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       event.preventDefault();

@@ -197,7 +197,7 @@ export const OptimisticMessageList: React.FC<OptimisticMessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Use React 19's useOptimistic hook for optimistic updates
-  const [optimisticMessages, addOptimistic] = useOptimistic(
+  const [optimisticMessages] = useOptimistic(
     messages,
     optimisticReducer
   );

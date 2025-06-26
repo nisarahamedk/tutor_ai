@@ -274,7 +274,7 @@ describe('TabManager', () => {
       expect(tablist).toHaveAttribute('aria-label', 'AI Tutor navigation');
       expect(tabpanel).toHaveAttribute('aria-label', 'Tab content');
       
-      tabs.forEach((tab, index) => {
+      tabs.forEach((tab) => {
         expect(tab).toHaveAttribute('aria-controls', expect.stringContaining('tabpanel'));
         expect(tab).toHaveAttribute('id', expect.stringContaining('tab'));
       });

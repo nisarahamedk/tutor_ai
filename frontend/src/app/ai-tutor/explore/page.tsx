@@ -1,7 +1,7 @@
 // Server Component page for track exploration
 import React, { Suspense } from 'react';
 import { Metadata } from 'next';
-import { TrackGrid } from '@/features/ai-tutor/components/learning/TrackGrid';
+// import { TrackGrid } from '@/features/ai-tutor/components/learning/TrackGrid';
 import { TrackGridSkeleton } from '@/features/ai-tutor/components/loading/TrackGridSkeleton';
 import { TrackExplorationClientWrapper } from './TrackExplorationClientWrapper';
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { useActionState } from 'react';
 import { sendMessageAction } from '../actions/sendMessage';
 import type { MessageActionState } from '../actions/types';

@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+// import { act, renderHook } from '@testing-library/react';
+import React from 'react';
 import type { ChatState, TabType, Message, OptimisticMessage } from '../../types';
 
 // Mock the enhanced chat store
 const createMockEnhancedChatStore = () => {
-  let state: ChatState = {
+  const state: ChatState = {
     // Regular state
     tabMessages: {
       home: [],
@@ -262,7 +263,7 @@ describe('Enhanced Chat Store (TDD)', () => {
     it('should support React components in messages', () => {
       // Test requirement: Store should support interactive components
       const messageWithComponent = createMockOptimisticMessage('Component message');
-      messageWithComponent.component = 'MockReactComponent' as any; // Mock React component
+      messageWithComponent.component = 'MockReactComponent' as React.ReactNode; // Mock React component
       
       expect(() => {
         mockStore.addOptimisticMessage('home', messageWithComponent);
@@ -307,7 +308,7 @@ describe('Enhanced Chat Store (TDD)', () => {
   describe('Store State Consistency', () => {
     it('should maintain state consistency during optimistic operations', () => {
       // Test requirement: Store should ensure state consistency
-      const initialState = { ...mockStore };
+      // const initialState = { ...mockStore };
       
       // Simulate optimistic operations
       mockStore.addOptimisticMessage('home', createMockOptimisticMessage('Test'));

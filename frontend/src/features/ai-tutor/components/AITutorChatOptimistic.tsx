@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
   Home,
   TrendingUp,
@@ -21,16 +21,13 @@ import { Badge } from '@/components/ui/badge';
 import { OptimisticMessageList } from './chat/OptimisticMessageList';
 import { OptimisticMessageInput } from './chat/OptimisticMessageInput';
 import { useOptimisticRetry } from '../hooks/useOptimisticRetry';
-import { useBatchOptimistic, createOptimisticMessage } from '../hooks/useBatchOptimistic';
+import { useBatchOptimistic } from '../hooks/useBatchOptimistic';
 
 // Import types
 import type { OptimisticMessage, TabType, QuickAction } from './chat/types';
 
 // Import previously created components for interactive content
-import { TrackExplorationComponent, LearningTrack } from './learning/TrackExplorationComponent';
-import { SkillAssessmentComponent, SkillAssessment } from './learning/SkillAssessmentComponent';
-import { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
-import { InteractiveLessonComponent } from './learning/InteractiveLessonComponent';
+import { TrackExplorationComponent } from './learning/TrackExplorationComponent';
 import { ProgressDashboardComponent } from './dashboard/ProgressDashboardComponent';
 import { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
 
@@ -100,14 +97,13 @@ export const AITutorChatOptimistic: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Use optimistic retry hook for failed message handling
-  const { retryMessage, isRetrying, retryCount, clearRetryState } = useOptimisticRetry();
+  const { retryMessage } = useOptimisticRetry();
 
   // Use batch optimistic hook for the current tab
   const {
     optimisticMessages,
     addOptimisticMessage,
     updateMessageStatus,
-    removeOptimisticMessage,
   } = useBatchOptimistic(tabMessages[activeTab]);
 
   // Update tab messages when optimistic messages change
@@ -122,6 +118,19 @@ export const AITutorChatOptimistic: React.FC = () => {
   const addMessageToCurrentTab = useCallback((message: OptimisticMessage) => {
     addOptimisticMessage(message);
   }, [addOptimisticMessage]);
+
+  // Handler functions for interactive components (defined early for use in simulateAPICall)
+
+  const handleReviewComplete = useCallback(() => {
+    const newMessage: OptimisticMessage = {
+      id: `ai-${Date.now()}`,
+      type: 'ai',
+      content: "Great job on the review! You're making excellent progress. What would you like to do next?",
+      timestamp: new Date(),
+      status: 'sent',
+    };
+    addMessageToCurrentTab(newMessage);
+  }, [addMessageToCurrentTab]);
 
   // Simulate API call with realistic behavior
   const simulateAPICall = useCallback(async (input: string): Promise<OptimisticMessage> => {
@@ -162,7 +171,7 @@ export const AITutorChatOptimistic: React.FC = () => {
         status: 'sent',
       };
     }
-  }, []);
+  }, [handleReviewComplete]);
 
   // Handle message sending with optimistic updates
   const handleSendMessage = useCallback(async (content: string, optimisticMessage: OptimisticMessage) => {
@@ -224,55 +233,6 @@ export const AITutorChatOptimistic: React.FC = () => {
     }
   }, [retryMessage, updateMessageStatus, handleSendMessage]);
 
-  // Handler functions for interactive components
-  const handleTrackSelection = useCallback((track: LearningTrack) => {
-    const newMessage: OptimisticMessage = {
-      id: `ai-${Date.now()}`,
-      type: 'ai',
-      content: `Excellent choice! The ${track.title} track is perfect for your goals. Before we start, let me assess your current skill level:`,
-      timestamp: new Date(),
-      status: 'sent',
-      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} />
-    };
-    addMessageToCurrentTab(newMessage);
-  }, [addMessageToCurrentTab]);
-
-  const handleAssessmentComplete = useCallback((skills: SkillAssessment[]) => {
-    const avgLevel = skills.reduce((sum, skill) => sum + skill.level, 0) / skills.length;
-    const levelText = avgLevel >= 4 ? 'advanced' : avgLevel >= 2.5 ? 'intermediate' : 'beginner';
-    const newMessage: OptimisticMessage = {
-      id: `ai-${Date.now()}`,
-      type: 'ai',
-      content: `Based on your assessment, you're at ${levelText} level. Now let's customize your learning experience:`,
-      timestamp: new Date(),
-      status: 'sent',
-      component: <LearningPreferencesComponent onComplete={handlePreferencesComplete} />
-    };
-    addMessageToCurrentTab(newMessage);
-  }, [addMessageToCurrentTab]);
-
-  const handlePreferencesComplete = useCallback(() => {
-    const newMessage: OptimisticMessage = {
-      id: `ai-${Date.now()}`,
-      type: 'ai',
-      content: "Perfect! Your learning plan is ready. Let's start with an interactive lesson:",
-      timestamp: new Date(),
-      status: 'sent',
-      component: <InteractiveLessonComponent />
-    };
-    addMessageToCurrentTab(newMessage);
-  }, [addMessageToCurrentTab]);
-
-  const handleReviewComplete = useCallback(() => {
-    const newMessage: OptimisticMessage = {
-      id: `ai-${Date.now()}`,
-      type: 'ai',
-      content: "Great job on the review! You're making excellent progress. What would you like to do next?",
-      timestamp: new Date(),
-      status: 'sent',
-    };
-    addMessageToCurrentTab(newMessage);
-  }, [addMessageToCurrentTab]);
 
   const handleShowProgress = useCallback(() => {
     setActiveTab('progress');
@@ -291,7 +251,7 @@ export const AITutorChatOptimistic: React.FC = () => {
       };
       addMessageToCurrentTab(newMessage);
     }, 500);
-  }, [addMessageToCurrentTab]);
+  }, [addMessageToCurrentTab, setActiveTab]);
 
   // Quick actions with optimistic behavior
   const quickActions: QuickAction[] = [
@@ -425,7 +385,7 @@ export const AITutorChatOptimistic: React.FC = () => {
                     onClick={action.action}
                     className="flex items-center space-x-2 bg-white hover:bg-gray-50"
                   >
-                    <action.icon className="h-4 w-4" />
+                    {React.createElement(action.icon, { className: "h-4 w-4" })}
                     <span>{action.label}</span>
                   </Button>
                 ))}

@@ -151,7 +151,7 @@ describe('useOptimizedSelector', () => {
     it('should use custom equality function when provided', () => {
       let equalityCallCount = 0;
       
-      const customEquality = (a: any, b: any) => {
+      const customEquality = (a: { count: number; name: string }, b: { count: number; name: string }) => {
         equalityCallCount++;
         return a.count === b.count;
       };
@@ -176,7 +176,7 @@ describe('useOptimizedSelector', () => {
     });
 
     it('should re-render when custom equality returns false', () => {
-      const customEquality = (a: any, b: any) => a.count === b.count;
+      const customEquality = (a: { count: number; name: string }, b: { count: number; name: string }) => a.count === b.count;
 
       const { result } = renderHook(() => 
         useOptimizedSelector(
@@ -202,7 +202,7 @@ describe('useOptimizedSelector', () => {
     it('should memoize selector results', () => {
       let selectorCallCount = 0;
       
-      const { result, rerender } = renderHook(() => 
+      const { rerender } = renderHook(() => 
         useOptimizedSelector(useTestStore, (state) => {
           selectorCallCount++;
           return state.count;
@@ -239,7 +239,7 @@ describe('useOptimizedSelector', () => {
       const { result } = renderHook(() => 
         useOptimizedSelector(
           useTestStore,
-          (state) => (state as any).nonExistentProperty
+          (state) => (state as unknown as Record<string, unknown>).nonExistentProperty
         )
       );
 
@@ -392,7 +392,7 @@ describe('useDebouncedUpdate', () => {
   describe('performance optimization', () => {
     it('should not create new debounced function on each render', () => {
       const callback = jest.fn();
-      let debouncedFunctionRef: any;
+      let debouncedFunctionRef: unknown;
       
       const { rerender } = renderHook(
         ({ value }) => {

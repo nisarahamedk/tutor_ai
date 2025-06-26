@@ -224,7 +224,7 @@ export const calculateCurrentStreak = (
   if (activities.length === 0) return 0;
 
   let streak = 0;
-  let currentDate = new Date();
+  const currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
 
   const uniqueDays = new Set<string>();
@@ -344,7 +344,7 @@ export const checkForNewAchievements = (
 
 export const checkAchievementCriteria = (
   criteria: AchievementCriteria,
-  stats: any,
+  stats: Record<string, unknown>,
   progress: Record<string, TrackProgress>,
   lessonProgress: Record<string, LessonProgress>,
   assessmentResults: Record<string, AssessmentResult>
@@ -386,10 +386,10 @@ export const checkAchievementCriteria = (
       actualValue = getCategoriesExplored(progress);
       break;
     case 'late-night-hours':
-      actualValue = getLateNightHours(progress, lessonProgress);
+      actualValue = getLateNightHours();
       break;
     case 'early-morning-hours':
-      actualValue = getEarlyMorningHours(progress, lessonProgress);
+      actualValue = getEarlyMorningHours();
       break;
     case 'daily-hours':
       actualValue = getMaxDailyHours(progress, lessonProgress);
@@ -544,18 +544,12 @@ const getCategoriesExplored = (progress: Record<string, TrackProgress>): number 
   return Math.min(Object.keys(progress).length, 10);
 };
 
-const getLateNightHours = (
-  progress: Record<string, TrackProgress>,
-  lessonProgress: Record<string, LessonProgress>
-): number => {
+const getLateNightHours = (): number => {
   // Simplified calculation - would need detailed time tracking
   return 0;
 };
 
-const getEarlyMorningHours = (
-  progress: Record<string, TrackProgress>,
-  lessonProgress: Record<string, LessonProgress>
-): number => {
+const getEarlyMorningHours = (): number => {
   // Simplified calculation - would need detailed time tracking
   return 0;
 };

@@ -126,16 +126,9 @@ export const useLearningStore = create<LearningState>()(
           }
         },
 
-        endSession: (score?: number, notes?: string) => {
+        endSession: () => {
           const session = get().currentSession;
           if (session) {
-            const updatedSession: LearningSession = {
-              ...session,
-              endTime: new Date().toISOString(),
-              completed: true,
-              score,
-              notes
-            };
             
             // Update progress for the track
             const progressUpdate: ProgressData = {
@@ -253,12 +246,13 @@ export const useLearningStore = create<LearningState>()(
           flashcards: state.flashcards
         }),
         version: 1,
-        migrate: (persistedState: any, version: number) => {
+        migrate: (persistedState: unknown, version: number) => {
           if (version === 0) {
+            const state = persistedState as Record<string, unknown>;
             return {
-              ...persistedState,
-              tracks: persistedState.tracks || getInitialTracks(),
-              flashcards: persistedState.flashcards || getInitialFlashcards()
+              ...state,
+              tracks: state.tracks || getInitialTracks(),
+              flashcards: state.flashcards || getInitialFlashcards()
             };
           }
           return persistedState;

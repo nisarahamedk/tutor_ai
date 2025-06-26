@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@/lib/utils', () => ({ cn: (...args) => args.filter(Boolean).join(' ') }));
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} alt={props.alt || ''} />,
+  default: (props) => <div data-testid="next-image" {...props} />,
 }));
 
 // Mock lucide-react icons (not directly used in this component, but good practice)
@@ -186,7 +186,6 @@ describe('FlashcardReviewComponent', () => {
   // This requires specific Jest setup if flashcards is a module-level const.
   // If FlashcardReviewComponent was a class or flashcards was fetched/prop, it'd be easier.
   describe('when no flashcards are available (hardcoded data override attempt)', () => {
-    let originalFlashcards;
 
     // This type of mocking is highly dependent on module structure and bundler behavior.
     // It's generally not recommended for deeply internal, hardcoded variables.

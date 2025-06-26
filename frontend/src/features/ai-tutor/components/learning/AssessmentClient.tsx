@@ -21,8 +21,8 @@ export function AssessmentClient({ assessment }: AssessmentClientProps) {
     setIsStarting(true);
     
     // Track analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'assessment_started', {
+    if (typeof window !== 'undefined' && (window as Window & { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'assessment_started', {
         event_category: 'learning',
         event_label: assessment.title,
         assessment_id: assessment.id,

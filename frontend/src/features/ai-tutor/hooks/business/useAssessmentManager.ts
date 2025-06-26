@@ -1,38 +1,41 @@
-// src/features/ai-tutor/hooks/business/useAssessmentManager.ts
-// Assessment Manager Business Logic Hook - Extracts assessment logic from components
+// src/features/ai-tutor/hooks/business/useSkillAssessmentManager.ts
+// SkillAssessment Manager Business Logic Hook - Extracts assessment logic from components
+'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useComprehensiveLearningStore } from '../../stores/comprehensiveLearningStore';
 import type { 
-  Assessment, 
   AssessmentResult, 
-  AssessmentAnswer,
-  AssessmentQuestion 
+  AssessmentAnswer
 } from '../../types/learning';
+import type {
+  SkillAssessment,
+  AssessmentQuestion
+} from '../../types';
 
 /**
- * Assessment answers mapping
+ * SkillAssessment answers mapping
  */
 export interface AssessmentAnswers {
   [questionId: string]: AssessmentAnswer;
 }
 
 /**
- * Interface for the Assessment Manager return value
+ * Interface for the SkillAssessment Manager return value
  */
 export interface AssessmentManagerReturn {
   // State
-  currentAssessment: Assessment | null;
+  currentSkillAssessment: SkillAssessment | null;
   questions: AssessmentQuestion[];
   currentQuestionIndex: number;
   answers: AssessmentAnswers;
   
   // Actions
-  startAssessment: (assessmentId: string) => Promise<void>;
+  startSkillAssessment: (assessmentId: string) => Promise<void>;
   answerQuestion: (questionId: string, answer: AssessmentAnswer) => void;
   nextQuestion: () => void;
   previousQuestion: () => void;
-  submitAssessment: () => Promise<AssessmentResult>;
+  submitSkillAssessment: () => Promise<AssessmentResult>;
   
   // Business Logic
   calculateScore: () => number;
@@ -46,17 +49,17 @@ export interface AssessmentManagerReturn {
 }
 
 /**
- * Assessment Manager Hook - Handles all assessment-related business logic
+ * SkillAssessment Manager Hook - Handles all assessment-related business logic
  * 
  * Extracts business logic from SkillAssessmentComponent to improve:
- * - Testability: Assessment logic can be tested in isolation
+ * - Testability: SkillAssessment logic can be tested in isolation
  * - Reusability: Can be used across multiple assessment components
  * - State Management: Complex assessment state in one place
  * - Timer Management: Automatic time tracking and submission
  */
-export const useAssessmentManager = (): AssessmentManagerReturn => {
+export const useSkillAssessmentManager = (): AssessmentManagerReturn => {
   // Local state for assessment session
-  const [currentAssessment, setCurrentAssessment] = useState<Assessment | null>(null);
+  const [currentSkillAssessment, setCurrentSkillAssessment] = useState<SkillAssessment | null>(null);
   const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<AssessmentAnswers>({});
@@ -74,6 +77,73 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
   const startAssessmentAction = useComprehensiveLearningStore(state => state.startAssessment);
   const submitAssessmentAction = useComprehensiveLearningStore(state => state.submitAssessment);
 
+  // Actions
+
+  /**
+   * Submit the assessment
+   */
+  const submitSkillAssessment = useCallback(async (): Promise<AssessmentResult> => {
+    if (!currentSkillAssessment) {
+      throw new Error('No assessment in progress');
+    }
+
+    // Validate all questions are answered
+    const unansweredQuestions = questions.filter(q => !answers[q.id]);
+    if (unansweredQuestions.length > 0) {
+      throw new Error(`Please answer all questions. ${unansweredQuestions.length} questions remaining.`);
+    }
+
+    // Convert answers to the format expected by the store
+    const assessmentAnswers: AssessmentAnswer[] = questions.map(question => {
+      const answer = answers[question.id];
+      return {
+        ...answer,
+        questionId: question.id,
+        isCorrect: checkAnswerCorrectness(question, answer.userAnswer)
+      };
+    });
+
+    try {
+      await submitAssessmentAction(currentSkillAssessment.id, assessmentAnswers);
+      
+      // Create result
+      const correctAnswers = assessmentAnswers.filter(answer => answer.isCorrect).length;
+      const score = Math.round((correctAnswers / assessmentAnswers.length) * 100);
+      
+      const result: AssessmentResult = {
+        assessmentId: currentSkillAssessment.id,
+        trackId: '',
+        startedAt: startTime ? new Date(startTime).toISOString() : new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        score,
+        totalQuestions: assessmentAnswers.length,
+        correctAnswers,
+        timeSpent: startTime ? Date.now() - startTime : 0,
+        answers: assessmentAnswers,
+        passed: score >= 70,
+        certificateEligible: score >= 80,
+        feedback: score >= 80 ? 'Excellent work!' : score >= 70 ? 'Good job!' : 'Keep practicing!'
+      };
+      
+      // Clear assessment state
+      setCurrentSkillAssessment(null);
+      setQuestions([]);
+      setCurrentQuestionIndex(0);
+      setAnswers({});
+      setStartTime(null);
+      
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Failed to submit assessment:', error);
+      throw error;
+    }
+  }, [currentSkillAssessment, questions, answers, startTime, submitAssessmentAction]);
+
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
@@ -83,10 +153,21 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     };
   }, []);
 
+  // Helper function for auto-submission
+  const handleAutoSubmit = useCallback(async () => {
+    if (currentSkillAssessment && Object.keys(answers).length > 0) {
+      try {
+        await submitSkillAssessment();
+      } catch (error) {
+        console.error('Auto-submission failed:', error);
+      }
+    }
+  }, [currentSkillAssessment, answers, submitSkillAssessment]);
+
   // Auto-submit when time expires
   useEffect(() => {
-    if (currentAssessment && startTime) {
-      const timeLimit = currentAssessment.timeLimit * 1000; // Convert to ms
+    if (currentSkillAssessment && startTime) {
+      const timeLimit = currentSkillAssessment.timeLimit * 1000; // Convert to ms
       const elapsed = Date.now() - startTime;
       const remaining = timeLimit - elapsed;
       
@@ -107,14 +188,12 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
         timerRef.current = null;
       }
     };
-  }, [currentAssessment, startTime]);
-
-  // Actions
+  }, [currentSkillAssessment, startTime, handleAutoSubmit]);
 
   /**
    * Start an assessment session
    */
-  const startAssessment = useCallback(async (assessmentId: string): Promise<void> => {
+  const startSkillAssessment = useCallback(async (assessmentId: string): Promise<void> => {
     try {
       // Find the track for this assessment
       const track = tracks.find(track => 
@@ -122,7 +201,7 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
       );
       
       if (!track) {
-        throw new Error('Assessment not found');
+        throw new Error('SkillAssessment not found');
       }
       
       if (!enrolledTracks.includes(track.id)) {
@@ -132,30 +211,25 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
       // Check if assessment is already in progress
       const existingResult = assessmentResults[assessmentId];
       if (existingResult && !existingResult.completedAt) {
-        throw new Error('Assessment already in progress');
+        throw new Error('SkillAssessment already in progress');
       }
 
       // Start assessment in store
       await startAssessmentAction(assessmentId);
       
       // Load assessment data (in real app, this would come from API)
-      const mockAssessment: Assessment = {
+      const mockSkillAssessment: SkillAssessment = {
         id: assessmentId,
-        title: 'Mock Assessment',
-        description: 'Assessment description',
-        questions: generateMockQuestions(assessmentId),
+        title: 'Mock SkillAssessment',
+        description: 'SkillAssessment description',
+        questions: generateMockQuestions(),
         timeLimit: 1800, // 30 minutes
-        difficulty: track.difficulty || 'beginner',
-        category: track.category,
-        trackId: track.id,
-        passingScore: 70,
-        maxAttempts: 3,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        difficulty: (track.difficulty || 'beginner').charAt(0).toUpperCase() + (track.difficulty || 'beginner').slice(1) as 'Beginner' | 'Intermediate' | 'Advanced',
+        category: track.category || 'General'
       };
       
-      setCurrentAssessment(mockAssessment);
-      setQuestions(mockAssessment.questions);
+      setCurrentSkillAssessment(mockSkillAssessment);
+      setQuestions(mockSkillAssessment.questions);
       setCurrentQuestionIndex(0);
       setAnswers({});
       setStartTime(Date.now());
@@ -197,52 +271,6 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     }
   }, [currentQuestionIndex]);
 
-  /**
-   * Submit the assessment
-   */
-  const submitAssessment = useCallback(async (): Promise<AssessmentResult> => {
-    if (!currentAssessment) {
-      throw new Error('No assessment in progress');
-    }
-
-    // Validate all questions are answered
-    const unansweredQuestions = questions.filter(q => !answers[q.id]);
-    if (unansweredQuestions.length > 0) {
-      throw new Error(`Please answer all questions. ${unansweredQuestions.length} questions remaining.`);
-    }
-
-    // Convert answers to the format expected by the store
-    const assessmentAnswers: AssessmentAnswer[] = questions.map(question => {
-      const answer = answers[question.id];
-      return {
-        ...answer,
-        questionId: question.id,
-        isCorrect: checkAnswerCorrectness(question, answer.answer)
-      };
-    });
-
-    try {
-      const result = await submitAssessmentAction(currentAssessment.id, assessmentAnswers);
-      
-      // Clear assessment state
-      setCurrentAssessment(null);
-      setQuestions([]);
-      setCurrentQuestionIndex(0);
-      setAnswers({});
-      setStartTime(null);
-      
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Failed to submit assessment:', error);
-      throw error;
-    }
-  }, [currentAssessment, questions, answers, submitAssessmentAction]);
-
   // Business Logic Methods
 
   /**
@@ -253,7 +281,7 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     
     const correctAnswers = questions.filter(question => {
       const answer = answers[question.id];
-      return answer && checkAnswerCorrectness(question, answer.answer);
+      return answer && checkAnswerCorrectness(question, answer.userAnswer);
     }).length;
     
     return Math.round((correctAnswers / questions.length) * 100);
@@ -263,20 +291,20 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
    * Get remaining time in seconds
    */
   const getTimeRemaining = useCallback((): number => {
-    if (!currentAssessment || !startTime) return 0;
+    if (!currentSkillAssessment || !startTime) return 0;
     
-    const timeLimit = currentAssessment.timeLimit * 1000; // Convert to ms
+    const timeLimit = currentSkillAssessment.timeLimit * 1000; // Convert to ms
     const elapsed = Date.now() - startTime;
     const remaining = timeLimit - elapsed;
     
     return Math.max(0, Math.floor(remaining / 1000)); // Return seconds
-  }, [currentAssessment, startTime]);
+  }, [currentSkillAssessment, startTime]);
 
   /**
    * Check if assessment can be submitted
    */
   const canSubmit = useCallback((): boolean => {
-    if (!currentAssessment || questions.length === 0) return false;
+    if (!currentSkillAssessment || questions.length === 0) return false;
     
     // Check if all questions are answered
     const allAnswered = questions.every(question => answers[question.id]);
@@ -285,7 +313,7 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     const timeRemaining = getTimeRemaining();
     
     return allAnswered && timeRemaining > 0;
-  }, [currentAssessment, questions, answers, getTimeRemaining]);
+  }, [currentSkillAssessment, questions, answers, getTimeRemaining]);
 
   /**
    * Get study recommendations based on performance
@@ -296,7 +324,7 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     const recommendations: string[] = [];
     const incorrectQuestions = questions.filter(question => {
       const answer = answers[question.id];
-      return answer && !checkAnswerCorrectness(question, answer.answer);
+      return answer && !checkAnswerCorrectness(question, answer.userAnswer);
     });
     
     if (incorrectQuestions.length > 0) {
@@ -348,31 +376,21 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     return Math.round((remainingQuestions * timePerQuestion) / (1000 * 60)); // Return minutes
   }, [startTime, questions.length, answers]);
 
-  // Helper function for auto-submission
-  const handleAutoSubmit = useCallback(async () => {
-    if (currentAssessment && Object.keys(answers).length > 0) {
-      try {
-        await submitAssessment();
-      } catch (error) {
-        console.error('Auto-submission failed:', error);
-      }
-    }
-  }, [currentAssessment, answers, submitAssessment]);
 
   // Return memoized object to prevent unnecessary re-renders
   return useMemo(() => ({
     // State
-    currentAssessment,
+    currentSkillAssessment,
     questions,
     currentQuestionIndex,
     answers,
     
     // Actions
-    startAssessment,
+    startSkillAssessment,
     answerQuestion,
     nextQuestion,
     previousQuestion,
-    submitAssessment,
+    submitSkillAssessment,
     
     // Business Logic
     calculateScore,
@@ -385,17 +403,17 @@ export const useAssessmentManager = (): AssessmentManagerReturn => {
     getEstimatedTimeToComplete
   }), [
     // State dependencies
-    currentAssessment,
+    currentSkillAssessment,
     questions,
     currentQuestionIndex,
     answers,
     
     // Action dependencies
-    startAssessment,
+    startSkillAssessment,
     answerQuestion,
     nextQuestion,
     previousQuestion,
-    submitAssessment,
+    submitSkillAssessment,
     
     // Business logic dependencies
     calculateScore,
@@ -453,7 +471,7 @@ function extractTopicFromQuestion(question: AssessmentQuestion): string {
 /**
  * Generate mock questions for testing
  */
-function generateMockQuestions(assessmentId: string): AssessmentQuestion[] {
+function generateMockQuestions(): AssessmentQuestion[] {
   return [
     {
       id: 'q1',
@@ -462,9 +480,7 @@ function generateMockQuestions(assessmentId: string): AssessmentQuestion[] {
       options: ['Library', 'Framework', 'Language', 'Tool'],
       correctAnswer: 'Library',
       explanation: 'React is a JavaScript library for building user interfaces',
-      points: 10,
-      difficulty: 'beginner',
-      timeLimit: 60
+      points: 10
     },
     {
       id: 'q2',
@@ -473,18 +489,14 @@ function generateMockQuestions(assessmentId: string): AssessmentQuestion[] {
       options: ['JavaScript XML', 'Java Syntax Extension', 'JSON XML', 'JavaScript Extension'],
       correctAnswer: 'JavaScript XML',
       explanation: 'JSX stands for JavaScript XML',
-      points: 10,
-      difficulty: 'beginner',
-      timeLimit: 60
+      points: 10
     },
     {
       id: 'q3',
       question: 'Explain the useState hook',
       type: 'short-answer',
       correctAnswer: 'useState is a Hook that lets you add React state to function components',
-      points: 15,
-      difficulty: 'intermediate',
-      timeLimit: 120
+      points: 15
     }
   ];
 }

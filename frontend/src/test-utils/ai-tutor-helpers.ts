@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { Message as AITutorMessage } from '@/features/ai-tutor/components/AITutorChat'; // Updated path
+import '@testing-library/jest-dom';
 
 // Example: Helper to navigate to a specific tab in AITutorChat
 export const navigateToAITutorTab = async (tabName: 'Home' | 'Progress' | 'Review' | 'Explore') => {

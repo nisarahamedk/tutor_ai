@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useOptimisticRetry, MAX_RETRY_ATTEMPTS, RETRY_DELAY_BASE } from '../useOptimisticRetry';
+import { useOptimisticRetry, MAX_RETRY_ATTEMPTS } from '../useOptimisticRetry';
 import type { OptimisticMessage } from '../../components/chat/types';
 
 // Mock setTimeout and clearTimeout for testing

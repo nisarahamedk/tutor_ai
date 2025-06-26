@@ -46,8 +46,8 @@ export const useUserStore = create<UserState>()(
               profile: state.profile 
                 ? { ...state.profile, ...profileUpdates }
                 : {
-                    name: profileUpdates.name || '',
-                    email: profileUpdates.email || '',
+                    name: profileUpdates?.name || '',
+                    email: profileUpdates?.email || '',
                     joinDate: new Date().toISOString(),
                     level: 1,
                     experience: 0,
@@ -112,13 +112,14 @@ export const useUserStore = create<UserState>()(
           isAuthenticated: state.isAuthenticated
         }),
         version: 1,
-        migrate: (persistedState: any, version: number) => {
+        migrate: (persistedState: unknown, version: number) => {
           if (version === 0) {
+            const state = persistedState as Record<string, unknown>;
             return {
-              ...persistedState,
+              ...state,
               preferences: {
                 ...getDefaultPreferences(),
-                ...persistedState.preferences
+                ...(state.preferences as Record<string, unknown> || {})
               }
             };
           }

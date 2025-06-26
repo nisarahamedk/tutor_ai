@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import AITutorChat, { Message } from '@/features/ai-tutor/components/AITutorChat'; // Updated import
+import AITutorChat from '@/features/ai-tutor/components/AITutorChat'; // Updated import
 import { navigateToAITutorTab, sendMessageInAITutor } from '@/test-utils/ai-tutor-helpers';
 
 // Mock ResizeObserver (if Radix UI or similar is used)
@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@/lib/utils', () => ({ cn: (...args) => args.filter(Boolean).join(' ') }));
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} alt={props.alt || ''} />,
+  default: (props) => <div data-testid="next-image" {...props} />,
 }));
 
 // Mock lucide-react icons
@@ -44,7 +44,7 @@ jest.mock('framer-motion', () => {
   const ActualReact = jest.requireActual('react'); // Use actual React for forwardRef
   return {
     motion: {
-      div: ActualReact.forwardRef(({ children, layout, initial, animate, exit, transition, ...rest }, ref) => (
+      div: ActualReact.forwardRef(({ children, ...rest }, ref) => (
         <div ref={ref} {...rest}>
           {children}
         </div>
@@ -271,7 +271,7 @@ describe('AITutorChat', () => {
 
     it('handles message sending error and allows retry', async () => {
       // Mock the simulateAPICall to throw an error first, then succeed
-      const mockSimulateAPICall = jest.fn()
+      jest.fn()
         .mockRejectedValueOnce(new Error('Network connection failed. Please try again.')) // First call fails
         .mockResolvedValueOnce({ // Second call (retry) succeeds
           id: 'ai-reply-success',
@@ -404,7 +404,7 @@ describe('AITutorChat', () => {
 
   it('handles full flow from track selection to lesson start, checking tab changes', async () => {
     render(<AITutorChat />);
-    let homeTab = screen.getByRole('tab', { name: /Home/i });
+    const homeTab = screen.getByRole('tab', { name: /Home/i });
     expect(homeTab).toHaveAttribute('aria-selected', 'true');
 
     // 1. Initial: HomePageComponent (on Home tab)

@@ -6,24 +6,24 @@ import { act } from '@testing-library/react';
 import useComprehensiveLearningStore from '../comprehensiveLearningStore';
 
 // Mock IndexedDB and other browser APIs
-const mockIndexedDB = {
-  open: vi.fn().mockResolvedValue({
-    createObjectStore: vi.fn(),
-    transaction: vi.fn().mockReturnValue({
-      objectStore: vi.fn().mockReturnValue({
-        add: vi.fn(),
-        put: vi.fn(),
-        get: vi.fn(),
-        delete: vi.fn(),
-        clear: vi.fn(),
-        count: vi.fn(),
-        createIndex: vi.fn(),
-        index: vi.fn()
-      })
-    })
-  }),
-  deleteDatabase: vi.fn()
-};
+// const _mockIndexedDB = {
+//   open: vi.fn().mockResolvedValue({
+//     createObjectStore: vi.fn(),
+//     transaction: vi.fn().mockReturnValue({
+//       objectStore: vi.fn().mockReturnValue({
+//         add: vi.fn(),
+//         put: vi.fn(),
+//         get: vi.fn(),
+//         delete: vi.fn(),
+//         clear: vi.fn(),
+//         count: vi.fn(),
+//         createIndex: vi.fn(),
+//         index: vi.fn()
+//       })
+//     })
+//   }),
+//   deleteDatabase: vi.fn()
+// };
 
 // Mock navigator
 Object.defineProperty(global, 'navigator', {

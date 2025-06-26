@@ -9,7 +9,7 @@ vi.mock('../../actions/sendMessage', () => ({
 
 import { sendMessageAction } from '../../actions/sendMessage';
 
-const mockSendMessageAction = sendMessageAction as any;
+const mockSendMessageAction = sendMessageAction as unknown as ReturnType<typeof vi.fn>;
 
 describe('useMessageAction', () => {
   beforeEach(() => {
@@ -104,7 +104,7 @@ describe('useMessageAction', () => {
     });
 
     it('should set isPending to true during message sending', async () => {
-      let resolvePromise: (value: any) => void;
+      let resolvePromise: (value: unknown) => void;
       const pendingPromise = new Promise((resolve) => {
         resolvePromise = resolve;
       });
@@ -289,7 +289,7 @@ describe('useMessageAction', () => {
     });
 
     it('should handle state transitions correctly', async () => {
-      let resolvePromise: (value: any) => void;
+      let resolvePromise: (value: unknown) => void;
       const pendingPromise = new Promise((resolve) => {
         resolvePromise = resolve;
       });
@@ -348,7 +348,7 @@ describe('useMessageAction', () => {
         
         try {
           await result.current.sendMessage(formData);
-        } catch (error) {
+        } catch {
           // Error should be handled by useActionState
         }
       });

@@ -12,7 +12,7 @@ const PROGRESS_STORE = 'progressCache';
 export class OfflineSyncManager {
   private db: IDBDatabase | null = null;
   private syncQueue: OfflineAction[] = [];
-  private isOnline: boolean = navigator.onLine;
+  private isOnline: boolean = typeof window !== 'undefined' && navigator?.onLine || false;
   private syncInProgress: boolean = false;
   private syncListeners: Set<(status: SyncStatus) => void> = new Set();
 
@@ -64,16 +64,18 @@ export class OfflineSyncManager {
 
   // Setup network event listeners
   private setupNetworkListeners(): void {
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.notifyStatusChange();
-      this.processQueueWhenOnline();
-    });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        this.isOnline = true;
+        this.notifyStatusChange();
+        this.processQueueWhenOnline();
+      });
 
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      this.notifyStatusChange();
-    });
+      window.addEventListener('offline', () => {
+        this.isOnline = false;
+        this.notifyStatusChange();
+      });
+    }
   }
 
   // Add action to offline queue
@@ -108,7 +110,7 @@ export class OfflineSyncManager {
       
       for (const action of unsyncedActions) {
         try {
-          await this.syncAction(action);
+          await this.syncAction();
           action.synced = true;
           action.retries = 0;
           await this.updateActionInDB(action);
@@ -136,7 +138,7 @@ export class OfflineSyncManager {
   }
 
   // Sync individual action
-  private async syncAction(action: OfflineAction): Promise<void> {
+  private async syncAction(): Promise<void> {
     // Simulate API call - in real implementation, this would call actual server endpoints
     return new Promise((resolve, reject) => {
       setTimeout(() => {
@@ -151,7 +153,7 @@ export class OfflineSyncManager {
   }
 
   // Cache progress data for offline access
-  public async cacheProgressData(key: string, data: any): Promise<void> {
+  public async cacheProgressData(key: string, data: unknown): Promise<void> {
     if (!this.db) return;
 
     const transaction = this.db.transaction([PROGRESS_STORE], 'readwrite');
@@ -171,13 +173,13 @@ export class OfflineSyncManager {
   }
 
   // Retrieve cached progress data
-  public async getCachedProgressData(key: string): Promise<any | null> {
+  public async getCachedProgressData(key: string): Promise<unknown | null> {
     if (!this.db) return null;
 
     const transaction = this.db.transaction([PROGRESS_STORE], 'readonly');
     const store = transaction.objectStore(PROGRESS_STORE);
 
-    return new Promise<any | null>((resolve, reject) => {
+    return new Promise<unknown | null>((resolve, reject) => {
       const request = store.get(key);
       request.onsuccess = () => {
         const result = request.result;
@@ -216,7 +218,7 @@ export class OfflineSyncManager {
     const store = transaction.objectStore(ACTIONS_STORE);
     const index = store.index('synced');
 
-    const request = index.getAll(false); // Get unsynced actions
+    const request = index.getAll(IDBKeyRange.only(false)); // Get unsynced actions
 
     request.onsuccess = () => {
       this.syncQueue = request.result || [];
@@ -310,12 +312,17 @@ export class OfflineSyncManager {
   // Get last sync time
   private getLastSyncTime(): string | null {
     // In real implementation, this would be stored in localStorage or IndexedDB
-    return localStorage.getItem('lastSyncTime');
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSyncTime');
+    }
+    return null;
   }
 
   // Set last sync time
   private setLastSyncTime(): void {
-    localStorage.setItem('lastSyncTime', new Date().toISOString());
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lastSyncTime', new Date().toISOString());
+    }
   }
 
   // Get sync errors
@@ -385,7 +392,7 @@ export const offlineSyncManager = new OfflineSyncManager();
 // Utility functions for common offline operations
 export const createOfflineAction = (
   type: string,
-  payload: any
+  payload: Record<string, unknown>
 ): Omit<OfflineAction, 'id' | 'timestamp' | 'synced' | 'retries'> => ({
   type,
   payload
@@ -393,7 +400,7 @@ export const createOfflineAction = (
 
 export const scheduleOfflineAction = (
   type: string,
-  payload: any
+  payload: Record<string, unknown>
 ): void => {
   offlineSyncManager.addOfflineAction(createOfflineAction(type, payload));
 };
@@ -415,7 +422,7 @@ export const syncTrackEnrollment = (trackId: string): void => {
   });
 };
 
-export const syncAssessmentResult = (assessmentId: string, result: any): void => {
+export const syncAssessmentResult = (assessmentId: string, result: unknown): void => {
   scheduleOfflineAction('SUBMIT_ASSESSMENT', {
     assessmentId,
     result,
@@ -423,7 +430,7 @@ export const syncAssessmentResult = (assessmentId: string, result: any): void =>
   });
 };
 
-export const syncPreferencesUpdate = (preferences: any): void => {
+export const syncPreferencesUpdate = (preferences: Record<string, unknown>): void => {
   scheduleOfflineAction('UPDATE_PREFERENCES', {
     preferences,
     timestamp: new Date().toISOString()
@@ -431,18 +438,19 @@ export const syncPreferencesUpdate = (preferences: any): void => {
 };
 
 // Cache helpers
-export const cacheTrackData = async (trackId: string, data: any): Promise<void> => {
+export const cacheTrackData = async (trackId: string, data: unknown): Promise<void> => {
   await offlineSyncManager.cacheProgressData(`track_${trackId}`, data);
 };
 
-export const getCachedTrackData = async (trackId: string): Promise<any | null> => {
+export const getCachedTrackData = async (trackId: string): Promise<unknown | null> => {
   return await offlineSyncManager.getCachedProgressData(`track_${trackId}`);
 };
 
-export const cacheUserPreferences = async (preferences: any): Promise<void> => {
+export const cacheUserPreferences = async (preferences: Record<string, unknown>): Promise<void> => {
   await offlineSyncManager.cacheProgressData('user_preferences', preferences);
 };
 
-export const getCachedUserPreferences = async (): Promise<any | null> => {
-  return await offlineSyncManager.getCachedProgressData('user_preferences');
+export const getCachedUserPreferences = async (): Promise<Record<string, unknown> | null> => {
+  const data = await offlineSyncManager.getCachedProgressData('user_preferences');
+  return data as Record<string, unknown> | null;
 };

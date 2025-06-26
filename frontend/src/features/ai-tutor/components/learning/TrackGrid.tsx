@@ -3,7 +3,6 @@ import React from 'react';
 import { Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { LearningTrack } from './TrackExplorationComponent';
 import { getLearningTracks } from '../../queries';
 import { TrackInteractionClient } from './TrackInteractionClient';
 

@@ -2,7 +2,6 @@
 // Tests for Learning Selectors (TASK-010)
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
 import type {
   LearningTrack,
   TrackProgress,

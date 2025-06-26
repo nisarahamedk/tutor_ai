@@ -4,7 +4,6 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import type { ChatContainerProps } from './types';
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({

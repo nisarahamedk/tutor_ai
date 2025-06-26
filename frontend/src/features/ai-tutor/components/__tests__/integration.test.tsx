@@ -31,7 +31,7 @@ jest.mock('@/lib/utils', () => ({
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} alt={props.alt || ''} />,
+  default: (props) => <div data-testid="next-image" {...props} />,
 }));
 
 // Mock lucide-react icons (provide mocks for all icons used across AITutorChat and its children)

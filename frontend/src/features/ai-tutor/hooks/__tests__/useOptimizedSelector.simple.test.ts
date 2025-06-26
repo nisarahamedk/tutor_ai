@@ -27,7 +27,7 @@ describe('useOptimizedSelector', () => {
   });
 
   it('should use shallow comparison by default', () => {
-    const selector = (state: any) => state.data;
+    const selector = (state: Record<string, unknown>) => state.data;
     mockStore.mockReturnValue('test-data');
 
     const { result } = renderHook(() => 
@@ -39,7 +39,7 @@ describe('useOptimizedSelector', () => {
   });
 
   it('should use custom equality function when provided', () => {
-    const selector = (state: any) => state.data;
+    const selector = (state: Record<string, unknown>) => state.data;
     const equalityFn = vi.fn();
     mockStore.mockReturnValue('test-data');
 

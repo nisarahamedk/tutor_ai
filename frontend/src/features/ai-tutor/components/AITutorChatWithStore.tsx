@@ -30,9 +30,6 @@ import { useChatActions } from '../stores/chatStore';
 import type { TabType, OptimisticMessage } from '../types';
 
 // Import previously created components for interactive content
-import { TrackExplorationComponent, LearningTrack } from './learning/TrackExplorationComponent';
-import { SkillAssessmentComponent, SkillAssessment } from './learning/SkillAssessmentComponent';
-import { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
 import { InteractiveLessonComponent } from './learning/InteractiveLessonComponent';
 import { ProgressDashboardComponent } from './dashboard/ProgressDashboardComponent';
 import { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
@@ -42,7 +39,7 @@ import { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
  * Uses store selectors for performance optimization (no prop drilling)
  */
 const MessageListWithStore: React.FC<{ tab: TabType }> = ({ tab }) => {
-  const { messages, isTyping, error, pendingCount, failedCount } = useMessageDisplay(tab);
+  const { messages, isTyping } = useMessageDisplay(tab);
   const { retryMessage } = useChatActions();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -174,7 +171,7 @@ const MessageListWithStore: React.FC<{ tab: TabType }> = ({ tab }) => {
  * Uses store actions directly (no prop drilling)
  */
 const MessageInputWithStore: React.FC = () => {
-  const { sendMessage, isDisabled, error } = useMessageInput();
+  const { sendMessage, isDisabled } = useMessageInput();
   const [inputValue, setInputValue] = React.useState('');
 
   const handleSendMessage = async () => {
@@ -228,7 +225,7 @@ const MessageInputWithStore: React.FC = () => {
  * Shows message counts and status indicators
  */
 const TabManagerWithStore: React.FC = () => {
-  const { activeTab, setActiveTab, tabStats } = useTabManager();
+  const { setActiveTab, tabStats } = useTabManager();
 
   return (
     <div className="border-b px-6">
@@ -323,28 +320,8 @@ export const AITutorChatWithStore: React.FC = () => {
   const { sendMessageToTab, sendAIMessage } = useChatActions();
 
   // Handler functions now use store actions directly (no local state)
-  const handleTrackSelection = async (track: LearningTrack) => {
-    const content = `Excellent choice! The ${track.title} track is perfect for your goals. Before we start, let me assess your current skill level:`;
-    const component = <SkillAssessmentComponent onComplete={handleAssessmentComplete} />;
-    
-    sendAIMessage('explore', content, { trackId: track.id }, component);
-  };
 
-  const handleAssessmentComplete = async (skills: SkillAssessment[]) => {
-    const avgLevel = skills.reduce((sum, skill) => sum + skill.level, 0) / skills.length;
-    const levelText = avgLevel >= 4 ? 'advanced' : avgLevel >= 2.5 ? 'intermediate' : 'beginner';
-    const content = `Based on your assessment, you're at ${levelText} level. Now let's customize your learning experience:`;
-    const component = <LearningPreferencesComponent onComplete={handlePreferencesComplete} />;
-    
-    sendAIMessage(activeTab, content, { assessmentLevel: levelText }, component);
-  };
 
-  const handlePreferencesComplete = async () => {
-    const content = "Perfect! Your learning plan is ready. Let's start with an interactive lesson:";
-    const component = <InteractiveLessonComponent />;
-    
-    sendAIMessage(activeTab, content, { step: 'lesson-start' }, component);
-  };
 
   const handleReviewComplete = async () => {
     const content = "Great job on the review! You're making excellent progress. What would you like to do next?";

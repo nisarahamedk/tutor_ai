@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
-import type { ChatState, TabType, Message, OptimisticMessage, MessageStatus } from '../types';
+import type { ChatState, TabType, Message, OptimisticMessage } from '../types';
 
 // Helper function to generate initial messages for each tab
 const getInitialMessages = (tab: TabType): Message[] => {
@@ -305,9 +305,13 @@ export const useChatStore = create<ChatState>()(
           
           // Combine and sort by timestamp
           const combined = [
-            ...regularMessages.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp) })),
+            ...regularMessages.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp) })) as (Message | OptimisticMessage)[],
             ...optimisticMessages
-          ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+          ].sort((a, b) => {
+            const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+            const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+            return aTime - bTime;
+          });
           
           return combined;
         },
@@ -332,7 +336,7 @@ export const useChatStore = create<ChatState>()(
         
         getLastMessage: (tab: TabType) => {
           const combined = get().getCombinedMessages(tab);
-          return combined.length > 0 ? combined[combined.length - 1] : null;
+          return (combined.length > 0 ? combined[combined.length - 1] : null) as Message | null;
         },
         
         getPendingCount: (tab: TabType) => {
@@ -355,12 +359,13 @@ export const useChatStore = create<ChatState>()(
         }),
         // Handle storage migration if needed
         version: 2,
-        migrate: (persistedState: any, version: number) => {
+        migrate: (persistedState: unknown, version: number) => {
           if (version === 0 || version === 1) {
             // Migration from v0/v1 to v2 - ensure optimistic state exists
+            const state = persistedState as Record<string, unknown>;
             return {
-              ...persistedState,
-              tabMessages: persistedState.tabMessages || {
+              ...state,
+              tabMessages: state.tabMessages || {
                 home: getInitialMessages('home'),
                 progress: getInitialMessages('progress'),
                 review: getInitialMessages('review'),
@@ -469,7 +474,7 @@ export const useChatActions = () => {
       return message;
     },
     
-    sendAIMessage: (tab: TabType, content: string, metadata?: Record<string, any>, component?: React.ReactNode) => {
+    sendAIMessage: (tab: TabType, content: string, metadata?: Record<string, unknown>, component?: React.ReactNode) => {
       const message: Message = {
         id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content,

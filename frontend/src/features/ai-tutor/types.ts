@@ -8,7 +8,7 @@ export interface Message {
   content: string;
   type: 'user' | 'ai';
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   component?: React.ReactNode;
 }
 
@@ -25,7 +25,7 @@ export interface OptimisticMessage {
   error?: string; // Error message if failed
   retrying?: boolean; // If message is being retried
   component?: React.ReactNode;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface LearningTrack {
@@ -206,7 +206,7 @@ export interface UserState {
   reset: () => void;
   
   // Selectors
-  getPreference: (key: keyof UserPreferences) => any;
+  getPreference: (key: keyof UserPreferences) => unknown;
   hasAchievement: (achievement: string) => boolean;
   getLevel: () => number;
   getExperience: () => number;

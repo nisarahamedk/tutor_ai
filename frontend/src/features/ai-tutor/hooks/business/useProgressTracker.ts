@@ -4,12 +4,8 @@
 import { useCallback, useMemo } from 'react';
 import { useComprehensiveLearningStore } from '../../stores/comprehensiveLearningStore';
 import type { 
-  TrackProgress, 
-  LessonProgress, 
   Achievement, 
-  LearningStats,
-  WeeklyProgress,
-  StreakInfo
+  WeeklyProgress
 } from '../../types/learning';
 
 /**
@@ -94,7 +90,7 @@ export interface ProgressTrackerReturn {
  * - Performance: Optimized progress calculations with memoization
  * - Analytics: Rich insights and predictive capabilities
  */
-export const useProgressTracker = (userId?: string): ProgressTrackerReturn => {
+export const useProgressTracker = (): ProgressTrackerReturn => {
   // Subscribe to store state
   const progress = useComprehensiveLearningStore(state => state.progress);
   const lessonProgress = useComprehensiveLearningStore(state => state.lessonProgress);
@@ -108,7 +104,7 @@ export const useProgressTracker = (userId?: string): ProgressTrackerReturn => {
   const updateLessonProgressAction = useComprehensiveLearningStore(state => state.updateLessonProgress);
   const completeLessonAction = useComprehensiveLearningStore(state => state.completeLesson);
   const getWeeklyProgressAction = useComprehensiveLearningStore(state => state.getWeeklyProgress);
-  const getStreakInfo = useComprehensiveLearningStore(state => state.getStreakInfo);
+  // const getStreakInfo = useComprehensiveLearningStore(state => state.getStreakInfo);
 
   // Computed Progress Data (memoized)
 
@@ -380,7 +376,7 @@ export const useProgressTracker = (userId?: string): ProgressTrackerReturn => {
     const totalTracksCompleted = Object.values(progress)
       .filter(track => track.status === 'completed').length;
     
-    const totalPoints = achievements.reduce((sum, achievement) => sum + achievement.points, 0);
+    // const totalPoints = achievements.reduce((sum, achievement) => sum + achievement.points, 0);
 
     // Define milestones
     const milestones: Milestone[] = [
@@ -424,7 +420,7 @@ export const useProgressTracker = (userId?: string): ProgressTrackerReturn => {
 
     // Find next uncompleted milestone
     return milestones.find(milestone => milestone.current < milestone.target) || null;
-  }, [lessonProgress, progress, achievements, learningStreak]);
+  }, [lessonProgress, progress, learningStreak]);
 
   // Return memoized object to prevent unnecessary re-renders
   return useMemo(() => ({

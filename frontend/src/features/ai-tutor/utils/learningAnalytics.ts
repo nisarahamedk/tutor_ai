@@ -52,9 +52,9 @@ export const computeLearningStats = (
   const weeklyProgress = calculateWeeklyProgress(progress, lessonProgress);
   const learningVelocity = calculateLearningVelocity(weeklyProgress);
   
-  const skills = extractSkillsFromProgress(progress, lessonProgress);
+  const skills = extractSkillsFromProgress();
   const strongestSkills = getStrongestSkills(skills);
-  const improvementAreas = getImprovementAreas(skills, assessmentResults);
+  const improvementAreas = getImprovementAreas(skills);
   
   const completionRate = enrolledTracks.length > 0 
     ? (totalTracksCompleted / enrolledTracks.length) * 100
@@ -86,7 +86,7 @@ export const calculateCurrentStreak = (progress: Record<string, TrackProgress>):
   if (sortedActivities.length === 0) return 0;
   
   let streak = 0;
-  let currentDate = new Date();
+  const currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
   
   for (const activityDate of sortedActivities) {
@@ -140,8 +140,8 @@ export const getStreakInfo = (
   progress: Record<string, TrackProgress>,
   lessonProgress: Record<string, LessonProgress>
 ): StreakInfo => {
-  const current = calculateCurrentStreak(progress, lessonProgress);
-  const longest = calculateLongestStreak(progress, lessonProgress);
+  const current = calculateCurrentStreak(progress);
+  const longest = calculateLongestStreak(progress);
   
   const now = new Date();
   const thisWeek = getWeekActivities(progress, lessonProgress, now);
@@ -216,10 +216,7 @@ export const calculateLearningVelocity = (weeklyProgress: WeeklyProgress[]): num
 };
 
 // Skill analysis
-export const extractSkillsFromProgress = (
-  progress: Record<string, TrackProgress>,
-  lessonProgress: Record<string, LessonProgress>
-): Record<string, { experience: number; score: number }> => {
+export const extractSkillsFromProgress = (): Record<string, { experience: number; score: number }> => {
   const skills: Record<string, { experience: number; score: number }> = {};
   
   // This would be enhanced with actual track/lesson skill data
@@ -235,8 +232,7 @@ export const getStrongestSkills = (skills: Record<string, { experience: number; 
 };
 
 export const getImprovementAreas = (
-  skills: Record<string, { experience: number; score: number }>,
-  assessmentResults: Record<string, AssessmentResult>
+  skills: Record<string, { experience: number; score: number }>
 ): string[] => {
   const lowPerformingSkills = Object.entries(skills)
     .filter(([, data]) => data.score < 70)

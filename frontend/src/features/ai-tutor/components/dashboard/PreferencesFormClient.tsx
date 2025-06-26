@@ -75,8 +75,8 @@ export function PreferencesFormClient({ isOnboarding, initialPreferences }: Pref
     setIsSaving(true);
 
     // Track analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'preferences_updated', {
+    if (typeof window !== 'undefined' && (window as Window & { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'preferences_updated', {
         event_category: 'user_profile',
         event_label: isOnboarding ? 'onboarding' : 'settings_update',
         learning_style: learningStyle,
@@ -156,7 +156,7 @@ export function PreferencesFormClient({ isOnboarding, initialPreferences }: Pref
 
       {/* Learning Style Section */}
       <div className="space-y-4">
-        <label className="text-sm font-medium block">What's your learning style?</label>
+        <label className="text-sm font-medium block">What&apos;s your learning style?</label>
         <div className="grid gap-3">
           {learningStyles.map((style) => (
             <motion.div

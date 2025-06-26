@@ -123,7 +123,7 @@ describe('Zustand Stores - Simple Tests', () => {
       expect(session).toBeDefined();
       expect(session?.trackId).toBe('session-track');
 
-      useLearningStore.getState().endSession(95, 'Great session!');
+      useLearningStore.getState().endSession();
       expect(useLearningStore.getState().currentSession).toBe(null);
       expect(useLearningStore.getState().progress['session-track']).toBeDefined();
     });

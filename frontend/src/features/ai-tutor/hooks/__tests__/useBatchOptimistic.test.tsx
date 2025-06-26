@@ -21,7 +21,7 @@ vi.mock('react', async (importOriginal) => {
   };
 });
 
-const mockUseOptimistic = React.useOptimistic as any;
+const mockUseOptimistic = React.useOptimistic as unknown as ReturnType<typeof vi.fn>;
 
 const sampleMessage: OptimisticMessage = {
   id: 'test-1',
@@ -228,7 +228,7 @@ describe('useBatchOptimistic', () => {
       
       // Mock the reducer behavior
       mockUseOptimistic.mockImplementation((initialState, reducer) => {
-        const dispatch = (action: any) => {
+        const dispatch = (action: unknown) => {
           currentState = reducer(currentState, action);
           mockDispatch(action);
         };
@@ -259,7 +259,7 @@ describe('useBatchOptimistic', () => {
       let currentState: OptimisticMessage[] = [initialMessage];
       
       mockUseOptimistic.mockImplementation((initialState, reducer) => {
-        const dispatch = (action: any) => {
+        const dispatch = (action: unknown) => {
           currentState = reducer(currentState, action);
           mockDispatch(action);
         };
@@ -281,7 +281,7 @@ describe('useBatchOptimistic', () => {
       let currentState: OptimisticMessage[] = [initialMessage];
       
       mockUseOptimistic.mockImplementation((initialState, reducer) => {
-        const dispatch = (action: any) => {
+        const dispatch = (action: unknown) => {
           currentState = reducer(currentState, action);
           mockDispatch(action);
         };

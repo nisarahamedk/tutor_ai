@@ -1,12 +1,13 @@
 // src/features/ai-tutor/hooks/utils/useStoreIntegration.ts
 // Store Integration Utility Hook for Cross-Store Operations
+'use client';
 
 import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { useChatStore } from '../../stores/chatStore';
 import { useComprehensiveLearningStore } from '../../stores/comprehensiveLearningStore';
 import { useOptimizedSelector } from './useOptimizedSelector';
 import type { TabType, Message } from '../../types';
-import type { LearningTrack, TrackProgress, Achievement } from '../../types/learning';
+import type { TrackProgress, Achievement } from '../../types/learning';
 
 /**
  * Combined state interface for cross-store operations
@@ -38,6 +39,39 @@ export interface SyncConfig {
 }
 
 /**
+ * Progress notification data types
+ */
+interface LessonCompleteData {
+  lessonTitle: string;
+  trackTitle: string;
+}
+
+interface TrackMilestoneData {
+  percentage: number;
+  trackTitle: string;
+}
+
+interface StreakAchievementData {
+  days: number;
+}
+
+interface AchievementUnlockedData {
+  achievementTitle: string;
+  points: number;
+}
+
+interface SkillMasteryData {
+  skill: string;
+}
+
+type ProgressData = 
+  | { type: 'lesson-complete'; data: LessonCompleteData }
+  | { type: 'track-milestone'; data: TrackMilestoneData }
+  | { type: 'streak-achievement'; data: StreakAchievementData }
+  | { type: 'achievement-unlocked'; data: AchievementUnlockedData }
+  | { type: 'skill-mastery'; data: SkillMasteryData };
+
+/**
  * Store integration return interface
  */
 export interface StoreIntegrationReturn {
@@ -47,7 +81,7 @@ export interface StoreIntegrationReturn {
   // Cross-store operations
   syncStores: () => void;
   triggerLearningFromChat: (trackId: string) => Promise<void>;
-  notifyProgressInChat: (progress: { type: string; data: any }) => void;
+  notifyProgressInChat: (progress: ProgressData) => void;
   
   // Configuration
   updateSyncConfig: (config: Partial<SyncConfig>) => void;
@@ -55,7 +89,7 @@ export interface StoreIntegrationReturn {
   
   // Utilities
   resetAllStores: () => void;
-  exportCombinedData: () => any;
+  exportCombinedData: () => unknown;
 }
 
 /**
@@ -86,7 +120,13 @@ export const useStoreIntegration = (): StoreIntegrationReturn => {
       getCombinedMessages: state.getCombinedMessages,
       getMessageCount: state.getMessageCount
     })
-  );
+  ) as {
+    activeTab: TabType;
+    tabMessages: Record<TabType, Message[]>;
+    isLoading: boolean;
+    getCombinedMessages: (tab: TabType) => (Message)[];
+    getMessageCount: (tab: TabType) => number;
+  };
 
   // Learning store selectors (optimized)
   const learningState = useOptimizedSelector(
@@ -98,20 +138,26 @@ export const useStoreIntegration = (): StoreIntegrationReturn => {
       achievements: state.achievements,
       learningStreak: state.learningStreak
     })
-  );
-
-  // Store actions
-  const chatActions = {
-    setActiveTab: useChatStore(state => state.setActiveTab),
-    sendMessageWithOptimistic: useChatStore(state => state.sendMessageWithOptimistic),
-    addMessage: useChatStore(state => state.addMessage)
+  ) as {
+    currentTrack: string | null;
+    enrolledTracks: string[];
+    progress: Record<string, TrackProgress>;
+    achievements: Achievement[];
+    learningStreak: number;
   };
 
-  const learningActions = {
-    enrollInTrack: useComprehensiveLearningStore(state => state.enrollInTrack),
-    updateLessonProgress: useComprehensiveLearningStore(state => state.updateLessonProgress),
-    completeLesson: useComprehensiveLearningStore(state => state.completeLesson)
-  };
+  // Store actions (memoized to prevent changing references)
+  const chatActions = useMemo(() => ({
+    setActiveTab: useChatStore.getState().setActiveTab,
+    sendMessageWithOptimistic: useChatStore.getState().sendMessageWithOptimistic,
+    addMessage: useChatStore.getState().addMessage
+  }), []);
+
+  const learningActions = useMemo(() => ({
+    enrollInTrack: useComprehensiveLearningStore.getState().enrollInTrack,
+    updateLessonProgress: useComprehensiveLearningStore.getState().updateLessonProgress,
+    completeLesson: useComprehensiveLearningStore.getState().completeLesson
+  }), []);
 
   // Combined state computation (memoized)
   const combinedState = useMemo((): CombinedState => {
@@ -135,8 +181,7 @@ export const useStoreIntegration = (): StoreIntegrationReturn => {
     
     const recommendedActions = generateRecommendedActions(
       chatState,
-      learningState,
-      syncConfigRef.current
+      learningState
     );
 
     return {
@@ -221,7 +266,7 @@ export const useStoreIntegration = (): StoreIntegrationReturn => {
   /**
    * Notify chat about learning progress
    */
-  const notifyProgressInChat = useCallback((progress: { type: string; data: any }): void => {
+  const notifyProgressInChat = useCallback((progress: ProgressData): void => {
     const config = syncConfigRef.current;
     
     if (!config.enableProgressNotifications) return;
@@ -297,7 +342,7 @@ export const useStoreIntegration = (): StoreIntegrationReturn => {
     console.log('Resetting all stores...');
     
     // Clear chat messages
-    Object.keys(chatState.tabMessages).forEach(tab => {
+    Object.keys(chatState.tabMessages).forEach(() => {
       // Implementation would call store reset methods
     });
     
@@ -358,37 +403,43 @@ export const useStoreIntegration = (): StoreIntegrationReturn => {
  * Generate recommended actions based on current state
  */
 function generateRecommendedActions(
-  chatState: any,
-  learningState: any,
-  config: SyncConfig
+  chatState: Record<string, unknown>,
+  learningState: Record<string, unknown>
 ): string[] {
   const actions: string[] = [];
 
+  // Cast to proper types for type safety
+  const enrolledTracks = learningState.enrolledTracks as string[] || [];
+  const progress = learningState.progress as Record<string, TrackProgress> || {};
+  const messageCount = chatState.messageCount as number || 0;
+  const learningStreak = learningState.learningStreak as number || 0;
+  const achievements = learningState.achievements as Achievement[] || [];
+
   // No active learning
-  if (learningState.enrolledTracks.length === 0) {
+  if (enrolledTracks.length === 0) {
     actions.push('Explore learning tracks to get started');
   }
 
   // Incomplete tracks
-  const incompleteTrack = Object.values(learningState.progress)
-    .find((track: any) => track.status === 'in-progress' && track.overallProgress < 100);
+  const incompleteTrack = Object.values(progress)
+    .find((track: TrackProgress) => track.status === 'in-progress' && track.overallProgress < 100);
   
   if (incompleteTrack) {
     actions.push('Continue your learning progress');
   }
 
   // Low engagement
-  if (chatState.messageCount < 5 && learningState.enrolledTracks.length > 0) {
+  if (messageCount < 5 && enrolledTracks.length > 0) {
     actions.push('Ask me questions about your learning topics');
   }
 
   // Streak at risk
-  if (learningState.learningStreak > 0 && learningState.learningStreak < 7) {
+  if (learningStreak > 0 && learningStreak < 7) {
     actions.push('Keep your learning streak alive');
   }
 
   // New achievements
-  const recentAchievements = learningState.achievements.filter((achievement: any) => {
+  const recentAchievements = achievements.filter((achievement: Achievement) => {
     const achievementAge = Date.now() - new Date(achievement.earnedAt).getTime();
     return achievementAge < 24 * 60 * 60 * 1000; // Within last 24 hours
   });

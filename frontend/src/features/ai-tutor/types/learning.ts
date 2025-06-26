@@ -34,7 +34,7 @@ export interface Lesson {
 
 export interface LessonContent {
   type: 'text' | 'video' | 'interactive' | 'quiz' | 'code';
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export interface LessonResource {
@@ -185,7 +185,7 @@ export interface StreakInfo {
 export interface OfflineAction {
   id: string;
   type: string;
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: string;
   synced: boolean;
   retries: number;
@@ -330,7 +330,7 @@ export type LearningEventType =
 export interface LearningEvent {
   type: LearningEventType;
   timestamp: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export type LearningSelector<T> = (state: ComprehensiveLearningState) => T;

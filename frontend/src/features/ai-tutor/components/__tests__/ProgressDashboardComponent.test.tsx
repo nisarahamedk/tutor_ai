@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@/lib/utils', () => ({ cn: (...args) => args.filter(Boolean).join(' ') }));
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} alt={props.alt || ''} />,
+  default: (props) => <div data-testid="next-image" {...props} />,
 }));
 
 // Mock lucide-react icons (ensure all used icons are mocked)

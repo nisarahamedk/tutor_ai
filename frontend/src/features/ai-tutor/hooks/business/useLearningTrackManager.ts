@@ -1,5 +1,6 @@
 // src/features/ai-tutor/hooks/business/useLearningTrackManager.ts
 // Learning Track Manager Business Logic Hook - Extracts track management from components
+'use client';
 
 import { useState, useCallback, useMemo } from 'react';
 import { useComprehensiveLearningStore } from '../../stores/comprehensiveLearningStore';
@@ -60,7 +61,6 @@ export const useLearningTrackManager = (): LearningTrackManagerReturn => {
   const tracks = useComprehensiveLearningStore(state => state.tracks);
   const enrolledTrackIds = useComprehensiveLearningStore(state => state.enrolledTracks);
   const progress = useComprehensiveLearningStore(state => state.progress);
-  const preferences = useComprehensiveLearningStore(state => state.learningPreferences);
   
   // Store actions
   const enrollInTrack = useComprehensiveLearningStore(state => state.enrollInTrack);
@@ -158,8 +158,8 @@ export const useLearningTrackManager = (): LearningTrackManagerReturn => {
    * Calculate difficulty score for a track
    */
   const calculateDifficulty = useCallback((track: LearningTrack): DifficultyScore => {
-    return calculateTrackDifficulty(track, tracks);
-  }, [tracks]);
+    return calculateTrackDifficulty(track);
+  }, []);
 
   // Recommendation Methods (memoized)
 
@@ -268,8 +268,7 @@ function canEnrollInTrackLogic(
  * Calculate track difficulty score (pure function)
  */
 function calculateTrackDifficulty(
-  track: LearningTrack,
-  allTracks: LearningTrack[]
+  track: LearningTrack
 ): DifficultyScore {
   // Base difficulty levels
   const baseDifficultyScores = {

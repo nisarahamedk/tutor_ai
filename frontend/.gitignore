@@ -60,3 +60,9 @@ dummy_test_dir*
 
 # Claude commands (local only)
 ../.claude/
+
+# Demo and stub files (not production ready)
+src/**/*demo*.tsx
+src/**/demo/
+src/**/*Demo*.tsx
+src/**/*stub*.tsx

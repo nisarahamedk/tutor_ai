@@ -29,8 +29,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     console.error('Learning component error:', error, errorInfo);
     
     // Track error analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'exception', {
+    if (typeof window !== 'undefined' && 'gtag' in window && typeof (window as typeof window & { gtag: (...args: unknown[]) => void }).gtag === 'function') {
+      (window as typeof window & { gtag: (...args: unknown[]) => void }).gtag('event', 'exception', {
         description: error.message,
         fatal: false,
       });
@@ -105,7 +105,7 @@ function DefaultErrorFallback({ error, reset }: { error?: Error; reset: () => vo
 }
 
 // Server Component Error Fallback for data fetching failures
-export function ServerComponentErrorFallback({ error, reset }: { error?: Error; reset: () => void }) {
+export function ServerComponentErrorFallback({ reset }: { error?: Error; reset: () => void }) {
   return (
     <Card className="border-yellow-200 bg-yellow-50">
       <CardHeader>
@@ -117,7 +117,7 @@ export function ServerComponentErrorFallback({ error, reset }: { error?: Error; 
       <CardContent>
         <div className="space-y-4">
           <p className="text-yellow-700">
-            We're having trouble loading your learning content right now. 
+            We&apos;re having trouble loading your learning content right now. 
             This could be due to a network issue or temporary server problem.
           </p>
           

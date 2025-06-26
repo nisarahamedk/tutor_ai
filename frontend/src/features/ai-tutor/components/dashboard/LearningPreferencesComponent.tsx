@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface LearningPreferencesComponentProps {
-  onComplete: (preferences: any) => void;
+  onComplete: (preferences: Record<string, unknown>) => void;
 }
 
 export const LearningPreferencesComponent: React.FC<LearningPreferencesComponentProps> = ({ onComplete }) => {
@@ -43,7 +43,7 @@ export const LearningPreferencesComponent: React.FC<LearningPreferencesComponent
       <div>
         <h3 className="text-lg font-semibold text-foreground mb-2">Learning Preferences</h3>
         <p className="text-sm text-muted-foreground">
-          Let's customize your learning experience
+          Let&apos;s customize your learning experience
         </p>
       </div>
 
@@ -68,7 +68,7 @@ export const LearningPreferencesComponent: React.FC<LearningPreferencesComponent
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-3 block">What's your learning style?</label>
+          <label className="text-sm font-medium mb-3 block">What&apos;s your learning style?</label>
           <div className="grid gap-3">
             {learningStyles.map((style) => (
               <Card

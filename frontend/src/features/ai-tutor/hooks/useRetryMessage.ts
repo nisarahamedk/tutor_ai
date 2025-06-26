@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useCallback } from 'react';
 import { useMessageAction } from './useMessageAction';
 import type { TabType } from '../actions/types';

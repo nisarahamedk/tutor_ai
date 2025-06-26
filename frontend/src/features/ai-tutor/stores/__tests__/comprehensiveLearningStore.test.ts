@@ -2,65 +2,52 @@
 // Comprehensive Learning Store Tests (TDD) - TASK-010
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
 import type { 
   ComprehensiveLearningState,
-  LearningTrack,
-  TrackProgress,
-  LessonProgress,
-  AssessmentResult,
   LearningPreferences,
-  Achievement,
-  LearningGoal,
-  OfflineAction,
-  SyncStatus,
-  LearningStats,
-  StreakInfo,
-  WeeklyProgress,
-  LearningRecommendation,
   AchievementType
 } from '../../types/learning';
 
 // Mock data factories
-const createMockTrack = (overrides: Partial<LearningTrack> = {}): LearningTrack => ({
-  id: `track-${Date.now()}-${Math.random()}`,
-  title: 'Test Track',
-  description: 'A test learning track',
-  difficulty: 'beginner',
-  estimatedHours: 10,
-  skills: ['JavaScript', 'React'],
-  category: 'Programming',
-  tags: ['web', 'frontend'],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  published: true,
-  lessons: [],
-  assessments: [],
-  ...overrides
-});
+// const createMockTrack = (overrides: Partial<LearningTrack> = {}): LearningTrack => ({
+//   id: `track-${Date.now()}-${Math.random()}`,
+//   title: 'Test Track',
+//   description: 'A test learning track',
+//   difficulty: 'beginner',
+//   estimatedHours: 10,
+//   skills: ['JavaScript', 'React'],
+//   category: 'Programming',
+//   tags: ['web', 'frontend'],
+//   createdAt: new Date().toISOString(),
+//   updatedAt: new Date().toISOString(),
+//   published: true,
+//   lessons: [],
+//   assessments: [],
+//   ...overrides
+// });
 
-const createMockTrackProgress = (overrides: Partial<TrackProgress> = {}): TrackProgress => ({
-  trackId: 'test-track',
-  enrolledAt: new Date().toISOString(),
-  lastAccessedAt: new Date().toISOString(),
-  overallProgress: 0,
-  completedLessons: [],
-  timeSpent: 0,
-  status: 'not-started',
-  ...overrides
-});
+// const createMockTrackProgress = (overrides: Partial<TrackProgress> = {}): TrackProgress => ({
+//   trackId: 'test-track',
+//   enrolledAt: new Date().toISOString(),
+//   lastAccessedAt: new Date().toISOString(),
+//   overallProgress: 0,
+//   completedLessons: [],
+//   timeSpent: 0,
+//   status: 'not-started',
+//   ...overrides
+// });
 
-const createMockLessonProgress = (overrides: Partial<LessonProgress> = {}): LessonProgress => ({
-  lessonId: 'test-lesson',
-  trackId: 'test-track',
-  startedAt: new Date().toISOString(),
-  progress: 0,
-  timeSpent: 0,
-  attempts: 1,
-  scores: [],
-  bookmarks: [],
-  ...overrides
-});
+// const createMockLessonProgress = (overrides: Partial<LessonProgress> = {}): LessonProgress => ({
+//   lessonId: 'test-lesson',
+//   trackId: 'test-track',
+//   startedAt: new Date().toISOString(),
+//   progress: 0,
+//   timeSpent: 0,
+//   attempts: 1,
+//   scores: [],
+//   bookmarks: [],
+//   ...overrides
+// });
 
 const createMockPreferences = (overrides: Partial<LearningPreferences> = {}): LearningPreferences => ({
   learningStyle: 'visual',
@@ -76,18 +63,18 @@ const createMockPreferences = (overrides: Partial<LearningPreferences> = {}): Le
   ...overrides
 });
 
-const createMockAchievement = (overrides: Partial<Achievement> = {}): Achievement => ({
-  id: `achievement-${Date.now()}`,
-  type: 'completion',
-  title: 'First Steps',
-  description: 'Complete your first lesson',
-  icon: '🎯',
-  earnedAt: new Date().toISOString(),
-  criteria: { type: 'lessons-completed', value: 1, comparison: 'greater-equal' },
-  points: 10,
-  rarity: 'common',
-  ...overrides
-});
+// const createMockAchievement = (overrides: Partial<Achievement> = {}): Achievement => ({
+//   id: `achievement-${Date.now()}`,
+//   type: 'completion',
+//   title: 'First Steps',
+//   description: 'Complete your first lesson',
+//   icon: '🎯',
+//   earnedAt: new Date().toISOString(),
+//   criteria: { type: 'lessons-completed', value: 1, comparison: 'greater-equal' },
+//   points: 10,
+//   rarity: 'common',
+//   ...overrides
+// });
 
 // Mock comprehensive learning store
 const createMockComprehensiveLearningStore = (): ComprehensiveLearningState => {
@@ -495,7 +482,7 @@ describe('Comprehensive Learning Store (TDD) - TASK-010', () => {
 
     it('should provide next recommendation', () => {
       // Test requirement: Store should provide specific recommendations
-      const recommendation = mockStore.getNextRecommendation();
+      // const recommendation = mockStore.getNextRecommendation();
       
       // Can be null if no recommendations available
       expect(mockStore.getNextRecommendation).toHaveBeenCalled();
@@ -504,7 +491,7 @@ describe('Comprehensive Learning Store (TDD) - TASK-010', () => {
     it('should provide skill progression insights', () => {
       // Test requirement: Store should track skill progression
       const skill = 'JavaScript';
-      const progression = mockStore.getSkillProgression(skill);
+      // const progression = mockStore.getSkillProgression(skill);
       
       // Can be null if skill not tracked
       expect(mockStore.getSkillProgression).toHaveBeenCalledWith(skill);

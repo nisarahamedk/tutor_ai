@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock('@/lib/utils', () => ({ cn: (...args) => args.filter(Boolean).join(' ') }));
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} alt={props.alt || ''} />,
+  default: (props) => <div data-testid="next-image" {...props} />,
 }));
 
 // Mock lucide-react icons
@@ -29,9 +29,12 @@ jest.mock('lucide-react', () => ({
 }));
 
 // Mock framer-motion
+const MockMotionDiv = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ children, ...rest }, ref) => <div ref={ref} {...rest}>{children}</div>);
+MockMotionDiv.displayName = 'MockMotionDiv';
+
 jest.mock('framer-motion', () => ({
   motion: {
-    div: React.forwardRef(({ children, ...rest }, ref) => <div ref={ref} {...rest}>{children}</div>),
+    div: MockMotionDiv,
   },
 }));
 
@@ -126,7 +129,7 @@ describe('TrackExplorationComponent', () => {
   });
 
   it('displays skills badges correctly, including "+X more" for tracks with >3 skills', () => {
-    const { rerender } = render(<TrackExplorationComponent onTrackSelect={mockOnTrackSelect} />);
+    render(<TrackExplorationComponent onTrackSelect={mockOnTrackSelect} />);
 
     // Test Case 1: Frontend Development (4 skills) -> React, TypeScript, CSS, +1 more
     const frontendCard = screen.getByText('Frontend Development').closest('div.cursor-pointer');
@@ -157,7 +160,7 @@ describe('TrackExplorationComponent', () => {
   it('calls onTrackSelect with the correct track data when each track card is clicked', () => {
     render(<TrackExplorationComponent onTrackSelect={mockOnTrackSelect} />);
 
-    internalTracks.forEach((track, index) => {
+    internalTracks.forEach((track) => {
       const trackCard = screen.getByText(track.title).closest('div.cursor-pointer');
       expect(trackCard).toBeInTheDocument();
 
@@ -194,10 +197,6 @@ describe('TrackExplorationComponent', () => {
     // For now, this test serves as a reminder for future refactoring.
 
     // To simulate, if we could temporarily mock the internal tracks to be empty:
-    const OriginalTrackExplorationComponent = jest.requireActual('../TrackExplorationComponent').TrackExplorationComponent;
-    const MockedTrackExplorationComponent = (props) => (
-      <OriginalTrackExplorationComponent {...props} __internalTracksForTestPurposes={[]} />
-    );
     // This kind of mocking is complex and depends on how the component is structured.
     // Awaiting component refactor to accept tracks as props for a proper empty state test.
     // For now, we acknowledge this limitation.

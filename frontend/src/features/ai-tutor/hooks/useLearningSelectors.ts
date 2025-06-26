@@ -19,8 +19,8 @@ import type {
   LearningGoal
 } from '../types/learning';
 
-// This will be imported from the actual store implementation
-declare const useComprehensiveLearningStore: any;
+// Import the actual store implementation
+import useComprehensiveLearningStore from '../stores/comprehensiveLearningStore';
 
 // Optimized selectors with shallow comparison for performance
 export const useLearningSelectors = {
@@ -76,29 +76,32 @@ export const useLearningSelectors = {
     )),
 
   // Filtered tracks with memoization
-  useTracksByDifficulty: (difficulty: LearningTrack['difficulty']): LearningTrack[] =>
-    useComprehensiveLearningStore(useMemo(() =>
-      useShallow((state: ComprehensiveLearningState) => 
-        state.tracks.filter(track => track.difficulty === difficulty)
-      ),
+  useTracksByDifficulty: (difficulty: LearningTrack['difficulty']): LearningTrack[] => {
+    const selector = useMemo(() => 
+      (state: ComprehensiveLearningState) => 
+        state.tracks.filter(track => track.difficulty === difficulty),
       [difficulty]
-    )),
+    );
+    return useComprehensiveLearningStore(useShallow(selector));
+  },
 
-  useTracksByCategory: (category: string): LearningTrack[] =>
-    useComprehensiveLearningStore(useMemo(() =>
-      useShallow((state: ComprehensiveLearningState) => 
-        state.tracks.filter(track => track.category === category)
-      ),
+  useTracksByCategory: (category: string): LearningTrack[] => {
+    const selector = useMemo(() =>
+      (state: ComprehensiveLearningState) => 
+        state.tracks.filter(track => track.category === category),
       [category]
-    )),
+    );
+    return useComprehensiveLearningStore(useShallow(selector));
+  },
 
-  useTracksBySkill: (skill: string): LearningTrack[] =>
-    useComprehensiveLearningStore(useMemo(() =>
-      useShallow((state: ComprehensiveLearningState) => 
-        state.tracks.filter(track => track.skills.includes(skill))
-      ),
+  useTracksBySkill: (skill: string): LearningTrack[] => {
+    const selector = useMemo(() =>
+      (state: ComprehensiveLearningState) => 
+        state.tracks.filter(track => track.skills.includes(skill)),
       [skill]
-    )),
+    );
+    return useComprehensiveLearningStore(useShallow(selector));
+  },
 
   // Progress-based selectors with memoization
   useInProgressTracks: (): LearningTrack[] =>
@@ -132,11 +135,13 @@ export const useLearningSelectors = {
   useAchievements: (): Achievement[] =>
     useComprehensiveLearningStore(useShallow((state: ComprehensiveLearningState) => state.achievements)),
 
-  useAchievementsByType: (type: AchievementType): Achievement[] =>
-    useComprehensiveLearningStore(useMemo(() =>
-      useShallow((state: ComprehensiveLearningState) => state.getAchievements(type)),
+  useAchievementsByType: (type: AchievementType): Achievement[] => {
+    const selector = useMemo(() =>
+      (state: ComprehensiveLearningState) => state.getAchievements(type),
       [type]
-    )),
+    );
+    return useComprehensiveLearningStore(useShallow(selector));
+  },
 
   useLearningGoals: (): LearningGoal[] =>
     useComprehensiveLearningStore(useShallow((state: ComprehensiveLearningState) => state.learningGoals)),

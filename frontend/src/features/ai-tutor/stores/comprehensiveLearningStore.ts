@@ -22,13 +22,13 @@ import type {
   WeeklyProgress,
   LearningRecommendation,
   SkillProgression,
-  LearningAnalytics
+  // LearningAnalytics
 } from '../types/learning';
 
 import {
   computeLearningStats,
   calculateCurrentStreak,
-  calculateLongestStreak,
+  // calculateLongestStreak,
   getStreakInfo,
   calculateWeeklyProgress,
   generateLearningAnalytics
@@ -36,9 +36,9 @@ import {
 
 import {
   checkForNewAchievements,
-  createLearningGoal,
+  // createLearningGoal,
   updateGoalProgress,
-  calculateTotalPoints
+  // calculateTotalPoints
 } from '../utils/gamification';
 
 import {
@@ -128,7 +128,7 @@ const getInitialPreferences = (): LearningPreferences => ({
 const getInitialSyncStatus = (): SyncStatus => ({
   lastSyncTime: null,
   pendingActions: 0,
-  isOnline: navigator.onLine,
+  isOnline: typeof window !== 'undefined' && navigator?.onLine || false,
   isSyncing: false,
   syncErrors: []
 });
@@ -355,12 +355,11 @@ export const useComprehensiveLearningStore = create<ComprehensiveLearningState>(
               
               // Update learning streak
               const newStreak = calculateCurrentStreak(
-                { ...state.progress, [trackId]: updatedTrackProgress },
-                { ...state.lessonProgress, [lessonId]: updatedLessonProgress }
+                { ...state.progress, [trackId]: updatedTrackProgress }
               );
               
               if (newStreak !== state.learningStreak) {
-                set(state => ({ learningStreak: newStreak }));
+                set(() => ({ learningStreak: newStreak }));
               }
               
               // Sync progress
@@ -572,7 +571,7 @@ export const useComprehensiveLearningStore = create<ComprehensiveLearningState>(
             }));
             
             try {
-              await offlineSyncManager.processOfflineActions();
+              await offlineSyncManager.processQueueWhenOnline();
               
               set(state => ({
                 syncStatus: {
@@ -733,7 +732,7 @@ export const useComprehensiveLearningStore = create<ComprehensiveLearningState>(
           },
 
           processOfflineActions: async () => {
-            await offlineSyncManager.processOfflineActions();
+            await offlineSyncManager.processQueueWhenOnline();
           },
 
           // Performance actions
@@ -787,12 +786,13 @@ export const useComprehensiveLearningStore = create<ComprehensiveLearningState>(
             totalLearningTime: state.totalLearningTime
           }),
           version: 1,
-          migrate: (persistedState: any, version: number) => {
+          migrate: (persistedState: unknown, version: number) => {
             if (version === 0) {
               // Migrate from v0 to v1
+              const state = persistedState as Record<string, unknown>;
               return {
-                ...persistedState,
-                learningGoals: persistedState.learningGoals || [],
+                ...state,
+                learningGoals: state.learningGoals || [],
                 syncStatus: getInitialSyncStatus()
               };
             }
@@ -811,14 +811,16 @@ export const useComprehensiveLearningStore = create<ComprehensiveLearningState>(
 // Setup online/offline listeners
 if (typeof window !== 'undefined') {
   const updateOnlineStatus = () => {
+    const isOnline = typeof window !== 'undefined' && navigator?.onLine || false;
+    
     useComprehensiveLearningStore.setState(state => ({
       syncStatus: {
         ...state.syncStatus,
-        isOnline: navigator.onLine
+        isOnline
       }
     }));
     
-    if (navigator.onLine) {
+    if (isOnline) {
       // Auto-sync when coming back online
       const state = useComprehensiveLearningStore.getState();
       if (state.syncStatus.pendingActions > 0) {

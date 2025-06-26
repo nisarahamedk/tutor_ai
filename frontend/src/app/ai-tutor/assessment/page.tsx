@@ -160,7 +160,7 @@ export default async function AssessmentListPage() {
             </div>
             <div>
               <h4 className="font-medium text-gray-900 mb-2">What happens after I complete an assessment?</h4>
-              <p className="text-gray-600">You'll receive a detailed report with your skill levels and recommended learning paths to improve.</p>
+              <p className="text-gray-600">You&apos;ll receive a detailed report with your skill levels and recommended learning paths to improve.</p>
             </div>
           </div>
         </footer>

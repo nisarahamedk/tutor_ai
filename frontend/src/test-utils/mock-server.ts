@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 
 export const handlers = [
   // Mock FastAPI endpoints
-  http.post('/api/chat/send', async ({ request }) => {
+  http.post('/api/chat/send', async () => {
     // const body = await request.json(); // If you need to inspect the body
     return HttpResponse.json({
       response: 'This is a mock AI response',
@@ -23,7 +23,7 @@ export const handlers = [
     ]);
   }),
 
-  http.put('/api/learning/tracks/:trackId/progress', async ({ params }) => {
+  http.put('/api/learning/tracks/:trackId/progress', async () => {
     // const { trackId } = params; // If you need to use the trackId
     // const body = await request.json(); // If you need to inspect the body
     return HttpResponse.json({

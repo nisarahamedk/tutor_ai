@@ -6,10 +6,10 @@ import type { Message } from '../types';
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    li: ({ children, ...props }: any) => <li {...props}>{children}</li>,
+    div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
+    li: ({ children, ...props }: React.ComponentProps<'li'>) => <li {...props}>{children}</li>,
   },
-  AnimatePresence: ({ children }: any) => children,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Mock react intersection observer if needed

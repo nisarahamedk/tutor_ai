@@ -1,15 +1,25 @@
-// src/features/ai-tutor/hooks/__tests__/useAssessmentManager.test.ts
-// TDD Tests for Assessment Manager Business Logic Hook
+// src/features/ai-tutor/hooks/__tests__/useSkillSkillAssessmentManager.test.ts
+// TDD Tests for SkillAssessment Manager Business Logic Hook
 
 import { renderHook, act } from '@testing-library/react';
-import { useAssessmentManager } from '../business/useAssessmentManager';
+import { useSkillSkillAssessmentManager, type AssessmentManagerReturn } from '../business/useSkillSkillAssessmentManager';
 import { useComprehensiveLearningStore } from '../../stores/comprehensiveLearningStore';
 import type { 
-  Assessment, 
-  AssessmentResult, 
-  AssessmentAnswer,
-  AssessmentQuestion 
+  SkillAssessmentResult, 
+  SkillAssessmentAnswer
 } from '../../types/learning';
+import type {
+  SkillSkillAssessment,
+  SkillAssessmentQuestion
+} from '../../types';
+
+// Test interface that extends the public interface with internal methods for testing
+interface TestAssessmentManagerReturn extends AssessmentManagerReturn {
+  setCurrentSkillAssessment: (assessment: SkillSkillAssessment) => void;
+  setCurrentQuestionIndex: (index: number) => void;
+  setAnswers: (answers: Record<string, SkillAssessmentAnswer>) => void;
+  setStartTime: (time: number) => void;
+}
 
 // Mock the store
 jest.mock('../../stores/comprehensiveLearningStore', () => ({
@@ -18,8 +28,8 @@ jest.mock('../../stores/comprehensiveLearningStore', () => ({
 
 const mockUseComprehensiveLearningStore = useComprehensiveLearningStore as jest.MockedFunction<typeof useComprehensiveLearningStore>;
 
-describe('useAssessmentManager', () => {
-  const mockQuestions: AssessmentQuestion[] = [
+describe('useSkillSkillAssessmentManager', () => {
+  const mockQuestions: SkillAssessmentQuestion[] = [
     {
       id: 'q1',
       question: 'What is React?',
@@ -53,7 +63,7 @@ describe('useAssessmentManager', () => {
     }
   ];
 
-  const mockAssessment: Assessment = {
+  const mockSkillAssessment: SkillAssessment = {
     id: 'react-basics-quiz',
     title: 'React Basics Quiz',
     description: 'Test your knowledge of React fundamentals',
@@ -68,7 +78,7 @@ describe('useAssessmentManager', () => {
     updatedAt: '2024-01-01T00:00:00.000Z'
   };
 
-  const mockAssessmentResult: AssessmentResult = {
+  const mockSkillAssessmentResult: SkillAssessmentResult = {
     assessmentId: 'react-basics-quiz',
     trackId: 'react-fundamentals',
     startedAt: '2024-01-15T10:00:00.000Z',
@@ -83,7 +93,7 @@ describe('useAssessmentManager', () => {
 
   const mockStore = {
     assessmentResults: {
-      'react-basics-quiz': mockAssessmentResult
+      'react-basics-quiz': mockSkillAssessmentResult
     },
     tracks: [
       {
@@ -92,8 +102,8 @@ describe('useAssessmentManager', () => {
       }
     ],
     enrolledTracks: ['react-fundamentals'],
-    startAssessment: jest.fn(),
-    submitAssessment: jest.fn(),
+    startSkillAssessment: jest.fn(),
+    submitSkillAssessment: jest.fn(),
     isLoading: false,
     error: null
   };
@@ -112,37 +122,37 @@ describe('useAssessmentManager', () => {
 
   describe('initialization', () => {
     it('should initialize with no current assessment', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
-      expect(result.current.currentAssessment).toBeNull();
+      expect(result.current.currentSkillAssessment).toBeNull();
       expect(result.current.questions).toEqual([]);
       expect(result.current.currentQuestionIndex).toBe(0);
       expect(result.current.answers).toEqual({});
     });
   });
 
-  describe('startAssessment action', () => {
+  describe('startSkillAssessment action', () => {
     it('should start assessment successfully', async () => {
-      mockStore.startAssessment.mockResolvedValue(undefined);
+      mockStore.startSkillAssessment.mockResolvedValue(undefined);
       
       // Mock assessment data (in real app, this would come from API)
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       await act(async () => {
-        await result.current.startAssessment('react-basics-quiz');
+        await result.current.startSkillAssessment('react-basics-quiz');
       });
 
-      expect(mockStore.startAssessment).toHaveBeenCalledWith('react-basics-quiz');
+      expect(mockStore.startSkillAssessment).toHaveBeenCalledWith('react-basics-quiz');
     });
 
     it('should handle assessment start failure', async () => {
-      mockStore.startAssessment.mockRejectedValue(new Error('Failed to start assessment'));
+      mockStore.startSkillAssessment.mockRejectedValue(new Error('Failed to start assessment'));
       
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       await act(async () => {
         try {
-          await result.current.startAssessment('react-basics-quiz');
+          await result.current.startSkillAssessment('react-basics-quiz');
         } catch (error) {
           expect(error).toBeInstanceOf(Error);
         }
@@ -152,11 +162,11 @@ describe('useAssessmentManager', () => {
     it('should prevent starting assessment if not enrolled in track', async () => {
       mockStore.enrolledTracks = [];
       
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       await act(async () => {
         try {
-          await result.current.startAssessment('react-basics-quiz');
+          await result.current.startSkillAssessment('react-basics-quiz');
         } catch (error) {
           expect(error).toBeInstanceOf(Error);
           expect((error as Error).message).toContain('not enrolled');
@@ -165,14 +175,14 @@ describe('useAssessmentManager', () => {
     });
 
     it('should load questions when assessment starts', async () => {
-      mockStore.startAssessment.mockResolvedValue(undefined);
+      mockStore.startSkillAssessment.mockResolvedValue(undefined);
       
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       // Mock the assessment data loading
       act(() => {
         // Simulate loading assessment data
-        (result.current as any).setCurrentAssessment(mockAssessment);
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
       });
 
       expect(result.current.questions).toEqual(mockQuestions);
@@ -182,16 +192,16 @@ describe('useAssessmentManager', () => {
 
   describe('answerQuestion action', () => {
     beforeEach(async () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
       
       // Setup assessment
       act(() => {
-        (result.current as any).setCurrentAssessment(mockAssessment);
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
       });
     });
 
     it('should record answer for current question', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
         result.current.answerQuestion('q1', { 
@@ -208,7 +218,7 @@ describe('useAssessmentManager', () => {
     });
 
     it('should update answer if question is answered again', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
         result.current.answerQuestion('q1', { 
@@ -235,15 +245,15 @@ describe('useAssessmentManager', () => {
 
   describe('navigation actions', () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
       
       act(() => {
-        (result.current as any).setCurrentAssessment(mockAssessment);
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
       });
     });
 
     it('should navigate to next question', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
         result.current.nextQuestion();
@@ -253,11 +263,11 @@ describe('useAssessmentManager', () => {
     });
 
     it('should not navigate past last question', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
         // Go to last question
-        (result.current as any).setCurrentQuestionIndex(2);
+        (result.current as TestAssessmentManagerReturn).setCurrentQuestionIndex(2);
         result.current.nextQuestion();
       });
 
@@ -265,11 +275,11 @@ describe('useAssessmentManager', () => {
     });
 
     it('should navigate to previous question', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
         // Go to second question first
-        (result.current as any).setCurrentQuestionIndex(1);
+        (result.current as TestAssessmentManagerReturn).setCurrentQuestionIndex(1);
         result.current.previousQuestion();
       });
 
@@ -277,7 +287,7 @@ describe('useAssessmentManager', () => {
     });
 
     it('should not navigate before first question', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
         result.current.previousQuestion();
@@ -287,12 +297,12 @@ describe('useAssessmentManager', () => {
     });
   });
 
-  describe('submitAssessment action', () => {
+  describe('submitSkillAssessment action', () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
       
       act(() => {
-        (result.current as any).setCurrentAssessment(mockAssessment);
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
         // Answer all questions
         result.current.answerQuestion('q1', { 
           questionId: 'q1', 
@@ -316,31 +326,31 @@ describe('useAssessmentManager', () => {
     });
 
     it('should submit assessment with correct score calculation', async () => {
-      mockStore.submitAssessment.mockResolvedValue({
-        ...mockAssessmentResult,
+      mockStore.submitSkillAssessment.mockResolvedValue({
+        ...mockSkillAssessmentResult,
         completedAt: '2024-01-15T10:30:00.000Z',
         score: 67, // 2 out of 3 correct
         correctAnswers: 2,
         passed: false
       });
 
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       await act(async () => {
-        const assessmentResult = await result.current.submitAssessment();
+        const assessmentResult = await result.current.submitSkillAssessment();
         expect(assessmentResult.score).toBe(67);
         expect(assessmentResult.passed).toBe(false); // Below 70% passing
       });
     });
 
     it('should handle submission failure', async () => {
-      mockStore.submitAssessment.mockRejectedValue(new Error('Submission failed'));
+      mockStore.submitSkillAssessment.mockRejectedValue(new Error('Submission failed'));
 
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       await act(async () => {
         try {
-          await result.current.submitAssessment();
+          await result.current.submitSkillAssessment();
         } catch (error) {
           expect(error).toBeInstanceOf(Error);
         }
@@ -348,16 +358,16 @@ describe('useAssessmentManager', () => {
     });
 
     it('should prevent submission if not all questions answered', async () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       // Clear some answers
       act(() => {
-        (result.current as any).setAnswers({ q1: result.current.answers.q1 });
+        (result.current as TestAssessmentManagerReturn).setAnswers({ q1: result.current.answers.q1 });
       });
 
       await act(async () => {
         try {
-          await result.current.submitAssessment();
+          await result.current.submitSkillAssessment();
         } catch (error) {
           expect(error).toBeInstanceOf(Error);
           expect((error as Error).message).toContain('all questions');
@@ -368,20 +378,20 @@ describe('useAssessmentManager', () => {
 
   describe('business logic methods', () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
       
       act(() => {
-        (result.current as any).setCurrentAssessment(mockAssessment);
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
       });
     });
 
     describe('calculateScore', () => {
       it('should calculate correct score percentage', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         // Answer 2 out of 3 correctly
         act(() => {
-          (result.current as any).setAnswers({
+          (result.current as TestAssessmentManagerReturn).setAnswers({
             q1: { questionId: 'q1', isCorrect: true, timeSpent: 30000 },
             q2: { questionId: 'q2', isCorrect: true, timeSpent: 25000 },
             q3: { questionId: 'q3', isCorrect: false, timeSpent: 60000 }
@@ -392,10 +402,10 @@ describe('useAssessmentManager', () => {
       });
 
       it('should return 0 for no correct answers', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         act(() => {
-          (result.current as any).setAnswers({
+          (result.current as TestAssessmentManagerReturn).setAnswers({
             q1: { questionId: 'q1', isCorrect: false },
             q2: { questionId: 'q2', isCorrect: false },
             q3: { questionId: 'q3', isCorrect: false }
@@ -408,12 +418,12 @@ describe('useAssessmentManager', () => {
 
     describe('getTimeRemaining', () => {
       it('should calculate remaining time correctly', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         // Mock start time 5 minutes ago
         const startTime = Date.now() - (5 * 60 * 1000);
         act(() => {
-          (result.current as any).setStartTime(startTime);
+          (result.current as TestAssessmentManagerReturn).setStartTime(startTime);
         });
 
         const remaining = result.current.getTimeRemaining();
@@ -421,12 +431,12 @@ describe('useAssessmentManager', () => {
       });
 
       it('should return 0 when time expired', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         // Mock start time 35 minutes ago (beyond 30 min limit)
         const startTime = Date.now() - (35 * 60 * 1000);
         act(() => {
-          (result.current as any).setStartTime(startTime);
+          (result.current as TestAssessmentManagerReturn).setStartTime(startTime);
         });
 
         const remaining = result.current.getTimeRemaining();
@@ -436,10 +446,10 @@ describe('useAssessmentManager', () => {
 
     describe('canSubmit', () => {
       it('should allow submission when all questions answered', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         act(() => {
-          (result.current as any).setAnswers({
+          (result.current as TestAssessmentManagerReturn).setAnswers({
             q1: { questionId: 'q1', answer: 'Library' },
             q2: { questionId: 'q2', answer: 'JavaScript Extension' },
             q3: { questionId: 'q3', answer: 'State hook' }
@@ -450,10 +460,10 @@ describe('useAssessmentManager', () => {
       });
 
       it('should prevent submission when questions unanswered', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         act(() => {
-          (result.current as any).setAnswers({
+          (result.current as TestAssessmentManagerReturn).setAnswers({
             q1: { questionId: 'q1', answer: 'Library' }
             // q2 and q3 not answered
           });
@@ -463,16 +473,16 @@ describe('useAssessmentManager', () => {
       });
 
       it('should prevent submission when time expired', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         // Answer all questions but time expired
         act(() => {
-          (result.current as any).setAnswers({
+          (result.current as TestAssessmentManagerReturn).setAnswers({
             q1: { questionId: 'q1', answer: 'Library' },
             q2: { questionId: 'q2', answer: 'JavaScript Extension' },
             q3: { questionId: 'q3', answer: 'State hook' }
           });
-          (result.current as any).setStartTime(Date.now() - (35 * 60 * 1000));
+          (result.current as TestAssessmentManagerReturn).setStartTime(Date.now() - (35 * 60 * 1000));
         });
 
         expect(result.current.canSubmit()).toBe(false);
@@ -481,10 +491,10 @@ describe('useAssessmentManager', () => {
 
     describe('getRecommendations', () => {
       it('should provide study recommendations based on performance', () => {
-        const { result } = renderHook(() => useAssessmentManager());
+        const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
         act(() => {
-          (result.current as any).setAnswers({
+          (result.current as TestAssessmentManagerReturn).setAnswers({
             q1: { questionId: 'q1', isCorrect: false }, // React basics
             q2: { questionId: 'q2', isCorrect: true },  // JSX
             q3: { questionId: 'q3', isCorrect: false }  // Hooks
@@ -501,18 +511,18 @@ describe('useAssessmentManager', () => {
 
   describe('progress tracking', () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
       
       act(() => {
-        (result.current as any).setCurrentAssessment(mockAssessment);
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
       });
     });
 
     it('should track completion percentage', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
-        (result.current as any).setAnswers({
+        (result.current as TestAssessmentManagerReturn).setAnswers({
           q1: { questionId: 'q1', answer: 'Library' },
           q2: { questionId: 'q2', answer: 'JavaScript Extension' }
           // q3 not answered
@@ -523,15 +533,15 @@ describe('useAssessmentManager', () => {
     });
 
     it('should estimate time to complete', () => {
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       // Mock 2 questions answered in 5 minutes
       act(() => {
-        (result.current as any).setAnswers({
+        (result.current as TestAssessmentManagerReturn).setAnswers({
           q1: { questionId: 'q1', timeSpent: 150000 }, // 2.5 min
           q2: { questionId: 'q2', timeSpent: 150000 }  // 2.5 min
         });
-        (result.current as any).setStartTime(Date.now() - (5 * 60 * 1000));
+        (result.current as TestAssessmentManagerReturn).setStartTime(Date.now() - (5 * 60 * 1000));
       });
 
       const estimatedTime = result.current.getEstimatedTimeToComplete();
@@ -542,13 +552,13 @@ describe('useAssessmentManager', () => {
 
   describe('auto-submission on time expiry', () => {
     it('should auto-submit when time runs out', async () => {
-      mockStore.submitAssessment.mockResolvedValue(mockAssessmentResult);
+      mockStore.submitSkillAssessment.mockResolvedValue(mockSkillAssessmentResult);
       
-      const { result } = renderHook(() => useAssessmentManager());
+      const { result } = renderHook(() => useSkillSkillAssessmentManager());
 
       act(() => {
-        (result.current as any).setCurrentAssessment(mockAssessment);
-        (result.current as any).setStartTime(Date.now() - (29 * 60 * 1000)); // 29 minutes ago
+        (result.current as TestAssessmentManagerReturn).setCurrentSkillAssessment(mockSkillAssessment);
+        (result.current as TestAssessmentManagerReturn).setStartTime(Date.now() - (29 * 60 * 1000)); // 29 minutes ago
       });
 
       // Fast-forward time by 2 minutes to trigger auto-submit
@@ -557,7 +567,7 @@ describe('useAssessmentManager', () => {
       });
 
       // Should have auto-submitted
-      expect(mockStore.submitAssessment).toHaveBeenCalled();
+      expect(mockStore.submitSkillAssessment).toHaveBeenCalled();
     });
   });
 });

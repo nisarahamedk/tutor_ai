@@ -1,7 +1,8 @@
 // src/features/ai-tutor/hooks/utils/useOptimizedSelector.ts
 // Optimized Selector Utility Hook for Performance
+'use client';
 
-import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 /**
@@ -17,13 +18,16 @@ export const useOptimizedSelector = <T, R>(
   selector: (state: T) => R,
   equalityFn?: (a: R, b: R) => boolean
 ): R => {
-  // Use shallow comparison by default for better performance
+  // Always call useShallow at the top level to comply with hooks rules
+  const shallowSelector = useShallow(selector);
+  
+  // Use custom equality function if provided, otherwise use shallow comparison
   if (equalityFn) {
     return store(selector, equalityFn);
   }
   
   // For complex objects, use shallow comparison
-  return store(useShallow(selector));
+  return store(shallowSelector);
 };
 
 /**
@@ -79,10 +83,11 @@ export const useDebouncedUpdate = <T>(
  * @param deps - Dependencies array
  * @returns Memoized callback
  */
-export const useStableCallback = <T extends (...args: any[]) => any>(
+export const useStableCallback = <T extends (...args: unknown[]) => unknown>(
   callback: T,
-  deps: React.DependencyList
+  deps: unknown[]
 ): T => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(callback, deps);
 };
 
@@ -96,11 +101,11 @@ export const useStableCallback = <T extends (...args: any[]) => any>(
  */
 export const useMemoizedValue = <T>(
   factory: () => T,
-  deps: React.DependencyList,
+  deps: unknown[],
   equalityFn?: (a: T, b: T) => boolean
 ): T => {
-  const prevValue = useRef<T>();
-  const prevDeps = useRef<React.DependencyList>();
+  const prevValue = useRef<T | undefined>(undefined);
+  const prevDeps = useRef<unknown[] | undefined>(undefined);
   
   // Check if dependencies have changed
   const depsChanged = !prevDeps.current || 
@@ -145,7 +150,7 @@ export const useBatchUpdates = () => {
  */
 export const usePerformanceMonitor = (
   name: string,
-  deps: React.DependencyList
+  deps: unknown[]
 ): void => {
   const renderCount = useRef(0);
   const lastRenderTime = useRef(performance.now());
@@ -164,7 +169,7 @@ export const usePerformanceMonitor = (
       
       lastRenderTime.current = currentTime;
     }
-  });
+  }, [name, deps]);
 };
 
 /**
@@ -174,7 +179,7 @@ export const usePerformanceMonitor = (
  * @param delay - Throttle delay in milliseconds
  * @returns Throttled callback
  */
-export const useThrottledCallback = <T extends (...args: any[]) => any>(
+export const useThrottledCallback = <T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T => {
@@ -204,7 +209,7 @@ export const useThrottledCallback = <T extends (...args: any[]) => any>(
 /**
  * Shallow equality comparison function
  */
-export const shallowEqual = <T extends Record<string, any>>(a: T, b: T): boolean => {
+export const shallowEqual = <T extends Record<string, unknown>>(a: T, b: T): boolean => {
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
   
@@ -218,7 +223,7 @@ export const shallowEqual = <T extends Record<string, any>>(a: T, b: T): boolean
 /**
  * Deep equality comparison function (use sparingly)
  */
-export const deepEqual = (a: any, b: any): boolean => {
+export const deepEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   
   if (a == null || b == null) return a === b;
@@ -230,16 +235,19 @@ export const deepEqual = (a: any, b: any): boolean => {
   if (Array.isArray(a) !== Array.isArray(b)) return false;
   
   if (Array.isArray(a)) {
-    if (a.length !== b.length) return false;
+    if (!Array.isArray(b) || a.length !== b.length) return false;
     return a.every((item, index) => deepEqual(item, b[index]));
   }
   
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
+  const objA = a as Record<string, unknown>;
+  const objB = b as Record<string, unknown>;
+  
+  const keysA = Object.keys(objA);
+  const keysB = Object.keys(objB);
   
   if (keysA.length !== keysB.length) return false;
   
-  return keysA.every(key => deepEqual(a[key], b[key]));
+  return keysA.every(key => deepEqual(objA[key], objB[key]));
 };
 
 /**
@@ -264,7 +272,7 @@ export const useTrackChanges = <T>(
   value: T,
   name: string
 ): void => {
-  const prevValue = useRef<T>();
+  const prevValue = useRef<T | undefined>(undefined);
   
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && prevValue.current !== undefined) {

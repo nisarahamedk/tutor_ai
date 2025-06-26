@@ -17,8 +17,8 @@ import { apiClient } from '../../../../lib/api';
 import { revalidatePath } from 'next/cache';
 
 describe('sendMessageAction', () => {
-  const mockApiPost = apiClient.post as any;
-  const mockRevalidatePath = revalidatePath as any;
+  const mockApiPost = apiClient.post as ReturnType<typeof vi.fn>;
+  const mockRevalidatePath = revalidatePath as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -212,9 +212,9 @@ describe('sendMessageAction', () => {
     });
 
     it('should handle API validation errors from backend', async () => {
-      const apiError = new Error('Validation failed');
-      (apiError as any).status = 400;
-      (apiError as any).message = 'Message too long';
+      const apiError = new Error('Validation failed') as Error & { status?: number };
+      apiError.status = 400;
+      apiError.message = 'Message too long';
 
       mockApiPost.mockRejectedValueOnce(apiError);
 
@@ -233,8 +233,8 @@ describe('sendMessageAction', () => {
     });
 
     it('should handle server errors (500)', async () => {
-      const serverError = new Error('Internal server error');
-      (serverError as any).status = 500;
+      const serverError = new Error('Internal server error') as Error & { status?: number };
+      serverError.status = 500;
 
       mockApiPost.mockRejectedValueOnce(serverError);
 

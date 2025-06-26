@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -14,15 +14,18 @@ vi.mock('react', async (importOriginal) => {
 
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  Button: ({ children, ...props }: React.ComponentProps<'button'>) => <button {...props}>{children}</button>,
 }));
 
+const MockInput = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(({ ...props }, ref) => <input ref={ref} {...props} />);
+MockInput.displayName = 'MockInput';
+
 vi.mock('@/components/ui/input', () => ({
-  Input: React.forwardRef(({ ...props }: any, ref: any) => <input ref={ref} {...props} />),
+  Input: MockInput,
 }));
 
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+  cn: (...args: (string | undefined | null | boolean)[]) => args.filter(Boolean).join(' '),
 }));
 
 // Mock icons
@@ -34,9 +37,8 @@ vi.mock('lucide-react', () => ({
 
 import { useOptimistic } from 'react';
 import { OptimisticMessageInput } from '../OptimisticMessageInput';
-import type { OptimisticMessage } from '../types';
 
-const mockUseOptimistic = useOptimistic as any;
+const mockUseOptimistic = useOptimistic as unknown as ReturnType<typeof vi.fn>;
 
 describe('OptimisticMessageInput', () => {
   beforeEach(() => {

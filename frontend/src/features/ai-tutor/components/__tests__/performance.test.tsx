@@ -1,6 +1,13 @@
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { AITutorChat, Message as AITutorMessage } from '@/ai-tutor'; // Updated import
+
+// Type definitions for memory performance
+interface MemoryInfo {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
 
 // --- Standard Mocks ---
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
@@ -21,7 +28,7 @@ jest.mock('@/lib/utils', () => ({
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => <img {...props} alt={props.alt || ''} />,
+  default: (props) => <div data-testid="next-image" {...props} />,
 }));
 
 jest.mock('lucide-react', () => ({
@@ -186,7 +193,7 @@ describe('AITutorChat Performance Tests', () => {
   });
 
   it(`memory usage increase should be below ${MEMORY_INCREASE_THRESHOLD_MB / (1024 * 1024)}MB after multiple renders`, async () => {
-    if (!(global as any).gc || !(performance as any).memory) {
+    if (!(global as NodeJS.Global & { gc?: () => void }).gc || !(performance as Performance & { memory?: MemoryInfo }).memory) {
       console.warn('Performance.memory or global.gc not available. Skipping memory usage test.');
       // Mark test as skipped or passed if environment doesn't support it
       expect(true).toBe(true);
@@ -195,14 +202,14 @@ describe('AITutorChat Performance Tests', () => {
 
     const runGc = () => {
       try {
-        (global as any).gc();
+        (global as NodeJS.Global & { gc?: () => void }).gc?.();
       } catch (e) {
         console.warn('GC not available or failed:', e);
       }
     };
 
     runGc();
-    const initialMemory = (performance as any).memory.usedJSHeapSize;
+    const initialMemory = (performance as Performance & { memory?: MemoryInfo }).memory!.usedJSHeapSize;
 
     const renderCount = 10; // Render and unmount multiple times
     for (let i = 0; i < renderCount; i++) {
@@ -216,7 +223,7 @@ describe('AITutorChat Performance Tests', () => {
     }
 
     runGc();
-    const finalMemory = (performance as any).memory.usedJSHeapSize;
+    const finalMemory = (performance as Performance & { memory?: MemoryInfo }).memory!.usedJSHeapSize;
     const memoryIncrease = finalMemory - initialMemory;
 
     console.log(`Initial Memory: ${(initialMemory / (1024*1024)).toFixed(2)}MB`);

@@ -30,35 +30,35 @@ export {
 
 // Assessment Management
 export {
-  useAssessmentManager,
+  useSkillAssessmentManager,
   type AssessmentManagerReturn,
   type AssessmentAnswers
 } from './useAssessmentManager';
 
 // Learning Preferences Management (Placeholder for future implementation)
 export interface LearningPreferencesManagerReturn {
-  preferences: any;
-  updatePreference: (key: string, value: any) => void;
+  preferences: Record<string, unknown>;
+  updatePreference: (key: string, value: unknown) => void;
   validatePreferences: () => boolean;
   resetToDefaults: () => void;
-  getRecommendedSettings: () => any;
-  getOptimalLearningPath: () => any;
-  getPersonalizedContent: () => any;
+  getRecommendedSettings: () => Record<string, unknown>;
+  getOptimalLearningPath: () => string[];
+  getPersonalizedContent: () => Record<string, unknown>[];
 }
 
 // Analytics and Insights (Placeholder for future implementation)
 export interface LearningAnalyticsReturn {
-  learningStats: any;
-  performanceMetrics: any;
-  engagementData: any;
-  getPersonalizedInsights: () => any[];
-  getImprovementSuggestions: () => any[];
-  getLearningPatterns: () => any[];
-  predictSuccess: (trackId: string) => any;
-  estimateCompletionTime: (trackId: string) => any;
-  getOptimalStudySchedule: () => any;
-  trackEvent: (event: any) => void;
-  generateReport: (type: string) => Promise<any>;
+  learningStats: Record<string, number | string>;
+  performanceMetrics: Record<string, number>;
+  engagementData: Record<string, unknown>;
+  getPersonalizedInsights: () => Record<string, unknown>[];
+  getImprovementSuggestions: () => string[];
+  getLearningPatterns: () => Record<string, unknown>[];
+  predictSuccess: (trackId: string) => number;
+  estimateCompletionTime: (trackId: string) => number;
+  getOptimalStudySchedule: () => Record<string, unknown>;
+  trackEvent: (event: Record<string, unknown>) => void;
+  generateReport: (type: string) => Promise<Record<string, unknown>>;
 }
 
 // Type exports for comprehensive business logic
@@ -68,12 +68,11 @@ export type {
   Message,
   OptimisticMessage,
   LearningTrack,
-  TrackProgress,
-  LessonProgress,
-  Assessment,
-  AssessmentResult,
-  AssessmentAnswer,
-  Achievement
+  ProgressData,
+  SkillAssessment,
+  AssessmentQuestion,
+  Flashcard,
+  LearningSession
 } from '../../types';
 
 export type {
@@ -81,5 +80,10 @@ export type {
   WeeklyProgress,
   StreakInfo,
   LearningPreferences,
-  LearningGoal
+  LearningGoal,
+  TrackProgress,
+  LessonProgress,
+  AssessmentResult,
+  AssessmentAnswer,
+  Achievement
 } from '../../types/learning';

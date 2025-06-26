@@ -139,7 +139,7 @@ describe('Business Logic Hooks Integration', () => {
     expect(typeof businessHooks.useChatManager).toBe('function');
     expect(typeof businessHooks.useLearningTrackManager).toBe('function');
     expect(typeof businessHooks.useProgressTracker).toBe('function');
-    expect(typeof businessHooks.useAssessmentManager).toBe('function');
+    expect(typeof businessHooks.useSkillAssessmentManager).toBe('function');
     
     // Utility hooks should be available
     expect(typeof utilityHooks.useOptimizedSelector).toBe('function');

@@ -9,7 +9,7 @@ import type { LearningTrack } from '../components/learning/TrackExplorationCompo
 // Mock framer-motion to avoid issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
   },
 }));
 

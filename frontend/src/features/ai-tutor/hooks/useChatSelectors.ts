@@ -4,8 +4,8 @@
 // and providing granular subscriptions to prevent unnecessary re-renders
 
 import { useChatStore } from '../stores/chatStore';
-import type { TabType, Message, OptimisticMessage } from '../types';
-import { useCallback, useMemo } from 'react';
+import type { TabType } from '../types';
+import { useMemo } from 'react';
 
 // Core selective subscription hooks
 

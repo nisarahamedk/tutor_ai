@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Test the new import structure
@@ -24,10 +24,10 @@ vi.mock('@/features/ai-tutor/services', () => ({
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    button: ({ children, ...props }: any) => <button {...props}>{children}</button>
+    div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
+    button: ({ children, ...props }: React.ComponentProps<'button'>) => <button {...props}>{children}</button>
   },
-  AnimatePresence: ({ children }: any) => children
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children
 }));
 
 describe('Refactored Architecture Integration Tests', () => {
@@ -153,12 +153,12 @@ describe('Refactored Architecture Integration Tests', () => {
       expect(renderTime).toBeLessThan(100);
     });
 
-    it('should not have memory leaks in component imports', () => {
+    it('should not have memory leaks in component imports', async () => {
       // Test that imports don't create circular dependencies
-      expect(() => {
-        require('@/features/ai-tutor/components/AITutorChat');
-        require('@/features/ai-tutor/components/learning/TrackExplorationComponent');
-        require('@/features/ai-tutor/components/dashboard/ProgressDashboardComponent');
+      await expect(async () => {
+        await import('@/features/ai-tutor/components/AITutorChat');
+        await import('@/features/ai-tutor/components/learning/TrackExplorationComponent');
+        await import('@/features/ai-tutor/components/dashboard/ProgressDashboardComponent');
       }).not.toThrow();
     });
   });

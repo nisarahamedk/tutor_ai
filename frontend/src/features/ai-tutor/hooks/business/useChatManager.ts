@@ -51,7 +51,6 @@ export const useChatManager = (): ChatManagerReturn => {
   const sendMessageWithOptimistic = useChatStore(state => state.sendMessageWithOptimistic);
   const retryMessage = useChatStore(state => state.retryMessage);
   const setError = useChatStore(state => state.setError);
-  const getCombinedMessages = useChatStore(state => state.getCombinedMessages);
   const getMessageCount = useChatStore(state => state.getMessageCount);
   const getPendingCount = useChatStore(state => state.getPendingCount);
   const getFailedCount = useChatStore(state => state.getFailedCount);
@@ -196,7 +195,7 @@ export interface MessageComposerReturn {
   characterCount: number;
 }
 
-export const useMessageComposer = (tab: TabType): MessageComposerReturn => {
+export const useMessageComposer = (): MessageComposerReturn => {
   // Implementation would go here - placeholder for now
   // This demonstrates the pattern for more specialized hooks
   

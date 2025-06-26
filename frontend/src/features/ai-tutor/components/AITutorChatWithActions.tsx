@@ -28,9 +28,7 @@ import { useMessageAction } from '../hooks/useMessageAction';
 import type { TabType } from '../actions/types';
 
 // Import previously created components
-import { TrackExplorationComponent, LearningTrack } from './learning/TrackExplorationComponent';
-import { SkillAssessmentComponent, SkillAssessment } from './learning/SkillAssessmentComponent';
-import { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
+import { TrackExplorationComponent } from './learning/TrackExplorationComponent';
 import { InteractiveLessonComponent } from './learning/InteractiveLessonComponent';
 import { ProgressDashboardComponent } from './dashboard/ProgressDashboardComponent';
 import { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
@@ -137,40 +135,7 @@ export const AITutorChatWithActions: React.FC = () => {
 
   // Handler functions - keeping existing functionality
 
-  const handleTrackSelection = (track: LearningTrack) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: `Excellent choice! The ${track.title} track is perfect for your goals. Before we start, let me assess your current skill level:`,
-      timestamp: new Date(),
-      component: <SkillAssessmentComponent onComplete={handleAssessmentComplete} />
-    };
-    addMessageToCurrentTab(newMessage);
-  };
 
-  const handleAssessmentComplete = (skills: SkillAssessment[]) => {
-    const avgLevel = skills.reduce((sum, skill) => sum + skill.level, 0) / skills.length;
-    const levelText = avgLevel >= 4 ? 'advanced' : avgLevel >= 2.5 ? 'intermediate' : 'beginner';
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: `Based on your assessment, you're at ${levelText} level. Now let's customize your learning experience:`,
-      timestamp: new Date(),
-      component: <LearningPreferencesComponent onComplete={handlePreferencesComplete} />
-    };
-    addMessageToCurrentTab(newMessage);
-  };
-
-  const handlePreferencesComplete = () => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: "Perfect! Your learning plan is ready. Let's start with an interactive lesson:",
-      timestamp: new Date(),
-      component: <InteractiveLessonComponent />
-    };
-    addMessageToCurrentTab(newMessage);
-  };
 
   const handleContinueLearning = () => {
     const newMessage: ChatMessage = {

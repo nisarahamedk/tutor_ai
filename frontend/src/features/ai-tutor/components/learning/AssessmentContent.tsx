@@ -96,7 +96,7 @@ export async function AssessmentContent() {
               <div className="bg-gray-50 rounded-lg p-3 mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-900">What you'll discover:</span>
+                  <span className="text-sm font-medium text-gray-900">What you&apos;ll discover:</span>
                 </div>
                 <ul className="text-xs text-gray-600 space-y-1">
                   <li>• Your current skill level in each area</li>

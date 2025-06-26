@@ -41,7 +41,7 @@ jest.mock('lucide-react', () => ({
 // Mock the Slider component
 let mockSliderOnValueChangeCallback;
 jest.mock('@/components/ui/slider', () => ({
-  Slider: jest.fn(({ value, onValueChange, max, min, step }) => {
+  Slider: jest.fn(({ value, onValueChange, max, min }) => {
     mockSliderOnValueChangeCallback = onValueChange; // Capture the callback
     return (
       <div role="slider" aria-valuenow={value[0]} aria-valuemin={min} aria-valuemax={max} data-testid="mock-slider">
@@ -189,10 +189,3 @@ describe('LearningPreferencesComponent', () => {
   });
 });
 
-// Helper to query within a specific element
-import { queries, within as rtlWithin } from '@testing-library/dom';
-
-function within(element) {
-  const customQueries = {};
-  return rtlWithin(element, { ...queries, ...customQueries });
-}

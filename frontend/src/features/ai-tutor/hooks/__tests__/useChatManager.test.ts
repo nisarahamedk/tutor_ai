@@ -4,7 +4,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useChatManager } from '../business/useChatManager';
 import { useChatStore } from '../../stores/chatStore';
-import type { TabType, Message } from '../../types';
+import type { TabType } from '../../types';
 
 // Mock the store
 import { vi } from 'vitest';
@@ -13,7 +13,7 @@ vi.mock('../../stores/chatStore', () => ({
   useChatStore: vi.fn()
 }));
 
-const mockUseChatStore = useChatStore as any;
+const mockUseChatStore = useChatStore as jest.MockedFunction<typeof useChatStore>;
 
 describe('useChatManager', () => {
   const mockStore = {

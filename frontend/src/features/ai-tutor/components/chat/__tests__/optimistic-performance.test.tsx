@@ -25,9 +25,9 @@ Object.defineProperty(global, 'performance', {
 // Mock framer-motion for performance tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock icons
@@ -47,7 +47,7 @@ import { OptimisticMessageList } from '../OptimisticMessageList';
 import { OptimisticMessageInput } from '../OptimisticMessageInput';
 import type { OptimisticMessage } from '../types';
 
-const mockUseOptimistic = useOptimistic as any;
+const mockUseOptimistic = useOptimistic as unknown as ReturnType<typeof vi.fn>;
 
 describe('Optimistic Updates - Performance Tests', () => {
   beforeEach(() => {
@@ -184,7 +184,7 @@ describe('Optimistic Updates - Performance Tests', () => {
       const mockOnSendMessage = vi.fn();
       
       // Simulate a growing message list that gets updated frequently
-      const mockAddOptimistic = vi.fn((message) => {
+      const mockAddOptimistic = vi.fn(() => {
         messageCount++;
       });
 
@@ -275,7 +275,7 @@ describe('Optimistic Updates - Performance Tests', () => {
         .mockReturnValueOnce(1000) // Initial time
         .mockReturnValueOnce(1000.1); // Time after optimistic update
 
-      mockAddOptimistic.mockImplementation((message) => {
+      mockAddOptimistic.mockImplementation(() => {
         callTime = performance.now();
       });
 

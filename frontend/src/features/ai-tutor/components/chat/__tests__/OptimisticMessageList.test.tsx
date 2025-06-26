@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -15,9 +15,9 @@ vi.mock('react', async (importOriginal) => {
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock scrollIntoView
@@ -28,25 +28,25 @@ Object.defineProperty(Element.prototype, 'scrollIntoView', {
 
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  Button: ({ children, ...props }: React.ComponentProps<'button'>) => <button {...props}>{children}</button>,
 }));
 
 vi.mock('@/components/ui/avatar', () => ({
-  Avatar: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  AvatarFallback: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  Avatar: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
+  AvatarFallback: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
 }));
 
 vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  CardContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  Card: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
+  CardContent: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
 }));
 
 vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  ScrollArea: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
 }));
 
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+  cn: (...args: (string | undefined | null | boolean)[]) => args.filter(Boolean).join(' '),
 }));
 
 // Mock icons
@@ -64,7 +64,7 @@ import { useOptimistic } from 'react';
 import { OptimisticMessageList } from '../OptimisticMessageList';
 import type { OptimisticMessage } from '../types';
 
-const mockUseOptimistic = useOptimistic as any;
+const mockUseOptimistic = useOptimistic as unknown as ReturnType<typeof vi.fn>;
 
 const mockMessages: OptimisticMessage[] = [
   {
@@ -232,9 +232,8 @@ describe('OptimisticMessageList', () => {
 
     it('should handle optimistic updates correctly', () => {
       const mockAddOptimistic = vi.fn();
-      const optimisticReducer = vi.fn((state, optimisticValue) => [...state, optimisticValue]);
       
-      mockUseOptimistic.mockImplementation((initialState, reducer) => {
+      mockUseOptimistic.mockImplementation((initialState) => {
         return [initialState, mockAddOptimistic];
       });
 
@@ -514,7 +513,7 @@ describe('OptimisticMessageList', () => {
         type: 'user',
         timestamp: new Date(),
         status: 'sent',
-      } as any;
+      } as OptimisticMessage;
 
       mockUseOptimistic.mockReturnValue([[invalidMessage], vi.fn()]);
 

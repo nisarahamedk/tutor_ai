@@ -1,4 +1,4 @@
-import type { OptimisticMessage, MessageStatus } from '../components/chat/types';
+import type { OptimisticMessage } from '../components/chat/types';
 
 // Timing utilities for performance measurement
 export const performanceUtils = {

@@ -1,9 +1,10 @@
-import React, { Suspense } from 'react'; // Added Suspense and ensured React is imported
+import React, { Suspense } from 'react';
 import { AITutorChat } from '@/features/ai-tutor';
-import { LoadingSpinner } from '@/components/shared'; // Added LoadingSpinner import
-import Link from 'next/link'; // Keep existing imports if needed for layout
-import { Button } from '@/components/ui/button'; // Keep existing imports
-import { Brain, ArrowLeft } from 'lucide-react'; // Keep existing imports
+import { LoadingSpinner } from '@/components/shared';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Brain, ArrowLeft } from 'lucide-react';
+import { MonitoringInitializer } from '@/components/shared/MonitoringInitializer';
 
 // Retain the existing page layout structure if desired, or simplify.
 // The task description implies a simpler structure for the content area.
@@ -53,6 +54,9 @@ const AITutorPage: React.FC = () => {
           </Suspense>
         </div>
       </main>
+      
+      {/* Initialize monitoring and analytics */}
+      <MonitoringInitializer />
     </div>
   );
 };

@@ -11,7 +11,7 @@ import { mockApi } from '@/lib/api-mocks';
 
 
 export const InteractiveLessonComponent: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(0) // For future expansion to multiple steps
+  const [currentStep] = useState(0) // For future expansion to multiple steps
   const [userCode, setUserCode] = useState('function greet(name) {\n  // Your code here\n}')
 
   const steps = [

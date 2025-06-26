@@ -22,7 +22,6 @@ function optimisticInputReducer(
 
 export const OptimisticMessageInput: React.FC<OptimisticMessageInputProps> = ({
   onSendMessage,
-  activeTab,
   placeholder = "Type your message...",
   maxLength = 2000,
   disabled = false,
@@ -177,7 +176,7 @@ export const OptimisticMessageInput: React.FC<OptimisticMessageInputProps> = ({
       >
         <div className="flex-1">
           <InputComponent
-            ref={inputRef as any}
+            ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
             value={inputValue}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}

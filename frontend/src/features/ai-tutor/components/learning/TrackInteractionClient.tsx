@@ -21,8 +21,8 @@ export function TrackInteractionClient({ track }: TrackInteractionClientProps) {
     router.push(`/ai-tutor/tracks/${track.id}`);
     
     // Optional: Track analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'track_selected', {
+    if (typeof window !== 'undefined' && (window as Window & { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'track_selected', {
         event_category: 'learning',
         event_label: track.title,
         track_id: track.id,

@@ -12,7 +12,7 @@ export interface Message {
 export type TabType = 'home' | 'progress' | 'review' | 'explore';
 
 export interface QuickAction {
-  icon: React.ComponentType;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   action: () => void;
   loading?: boolean;
@@ -21,7 +21,7 @@ export interface QuickAction {
 export interface TabConfig {
   id: TabType;
   label: string;
-  icon: React.ComponentType;
+  icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
@@ -38,7 +38,7 @@ export interface OptimisticMessage {
   error?: string; // Error message if failed
   retrying?: boolean; // If message is being retried
   component?: React.ReactNode;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OptimisticMessageState {

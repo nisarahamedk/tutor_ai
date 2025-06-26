@@ -1,4 +1,6 @@
-import { useState, useCallback, useOptimistic } from 'react';
+'use client';
+
+import { useCallback, useOptimistic } from 'react';
 import type { OptimisticMessage, MessageStatus, UseBatchOptimisticResult } from '../components/chat/types';
 
 // Generate unique temporary ID
@@ -6,10 +8,17 @@ const generateTempId = (): string => {
   return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Action types for optimistic updates
+type OptimisticAction =
+  | { type: 'add'; payload: OptimisticMessage }
+  | { type: 'update'; payload: { tempId: string; updates: Partial<OptimisticMessage> } }
+  | { type: 'remove'; payload: { tempId: string } }
+  | { type: 'batch_update'; payload: Array<{ tempId: string; status: MessageStatus; error?: string }> };
+
 // Optimistic reducer for batch operations
 function batchOptimisticReducer(
   state: OptimisticMessage[],
-  action: { type: 'add' | 'update' | 'remove' | 'batch_update'; payload: any }
+  action: OptimisticAction
 ): OptimisticMessage[] {
   switch (action.type) {
     case 'add':
@@ -29,7 +38,7 @@ function batchOptimisticReducer(
     
     case 'batch_update':
       return state.map(msg => {
-        const update = action.payload.find((u: any) => 
+        const update = action.payload.find((u) => 
           u.tempId === msg.tempId || u.tempId === msg.id
         );
         return update ? { ...msg, status: update.status, error: update.error } : msg;
