@@ -28,6 +28,7 @@ export type {
 
 // Learning components
 export { TrackExplorationComponent } from './learning/TrackExplorationComponent';
+export { TrackExplorationWrapper } from './learning/TrackExplorationWrapper';
 export { SkillAssessmentComponent } from './learning/SkillAssessmentComponent';
 export { FlashcardReviewComponent } from './learning/FlashcardReviewComponent';
 export { InteractiveLessonComponent } from './learning/InteractiveLessonComponent';

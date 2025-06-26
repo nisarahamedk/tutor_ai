@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Play, Pause, MoreHorizontal } from 'lucide-react';
+import { ArrowRight, Play, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import type { UserProgress } from '../../queries';
@@ -29,8 +29,8 @@ export function ProgressInteractionClient({ track }: ProgressInteractionClientPr
     }
 
     // Track analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'track_action', {
+    if (typeof window !== 'undefined' && (window as Window & { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'track_action', {
         event_category: 'learning',
         event_label: track.trackName,
         track_id: track.trackId,
@@ -118,15 +118,15 @@ export function ProgressInteractionClient({ track }: ProgressInteractionClientPr
 }
 
 // Separate component for the continue learning button
-ProgressInteractionClient.ContinueLearningButton = function ContinueLearningButton() {
+export function ContinueLearningButton() {
   const router = useRouter();
 
   const handleContinueLearning = () => {
     router.push('/ai-tutor/dashboard');
     
     // Track analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'continue_learning_clicked', {
+    if (typeof window !== 'undefined' && (window as Window & { gtag?: (...args: unknown[]) => void }).gtag) {
+      (window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'continue_learning_clicked', {
         event_category: 'navigation',
         event_label: 'progress_dashboard'
       });

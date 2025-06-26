@@ -3,13 +3,13 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ProgressInteractionClient } from '../components/dashboard/ProgressInteractionClient';
+import { ProgressInteractionClient, ContinueLearningButton } from '../components/dashboard/ProgressInteractionClient';
 import type { UserProgress } from '../queries';
 
 // Mock framer-motion to avoid issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
   },
 }));
 
@@ -67,7 +67,7 @@ describe('Progress Server Component Architecture - Client Components', () => {
 
   describe('ContinueLearningButton', () => {
     it('should render continue learning button', () => {
-      render(<ProgressInteractionClient.ContinueLearningButton />);
+      render(<ContinueLearningButton />);
       
       expect(screen.getByText('Continue Learning')).toBeInTheDocument();
     });

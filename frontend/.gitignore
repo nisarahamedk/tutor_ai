@@ -50,8 +50,13 @@ node_modules/
 # Generated files
 test-results.json
 *-IMPLEMENTATION-SUMMARY.md
+build_errors.txt
+REFACTORING-COMPLETION-REPORT.md
 
 # Dummy/temp files
 dummy_test_dir*
 *temp*
 *.tmp
+
+# Claude commands (local only)
+../.claude/

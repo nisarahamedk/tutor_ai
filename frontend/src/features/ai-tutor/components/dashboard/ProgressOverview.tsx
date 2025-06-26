@@ -4,7 +4,7 @@ import { TrendingUp, Award, CheckCircle, Star, Clock, Target } from 'lucide-reac
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getUserProgress } from '../../queries';
-import { ProgressInteractionClient } from './ProgressInteractionClient';
+import { ProgressInteractionClient, ContinueLearningButton } from './ProgressInteractionClient';
 
 // Mock user ID - in production this would come from authentication
 const MOCK_USER_ID = 'user-123';
@@ -51,7 +51,7 @@ export async function ProgressOverview() {
 
       {/* Learning Tracks Grid - Server rendered */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-        {progressData.tracks.map((track, index) => {
+        {progressData.tracks.map((track) => {
           const IconComponent = track.status === 'active' ? TrendingUp : Clock;
           
           return (
@@ -159,7 +159,7 @@ export async function ProgressOverview() {
 
       {/* Continue Learning Section - Client Interactive */}
       <div className="text-center mt-6">
-        <ProgressInteractionClient.ContinueLearningButton />
+        <ContinueLearningButton />
       </div>
     </div>
   );
