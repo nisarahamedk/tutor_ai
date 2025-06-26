@@ -58,27 +58,9 @@ export interface SkillAssessmentData {
  */
 export async function getLearningTracks(): Promise<LearningTrack[]> {
   try {
-    // In development, return mock data
-    if (process.env.NODE_ENV === 'development') {
-      return getMockLearningTracks();
-    }
-
-    const response = await fetch(`${API_BASE}/api/learning/tracks`, {
-      next: { 
-        revalidate: 3600, // 1 hour cache
-        tags: [CACHE_TAGS.LEARNING_TRACKS] 
-      },
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch learning tracks: ${response.status}`);
-    }
-
-    const tracks = await response.json();
-    return tracks;
+    // Always use mock data for isolated frontend implementation
+    // In production, this would connect to actual backend
+    return getMockLearningTracks();
   } catch (error) {
     console.error('Error fetching learning tracks:', error);
     // Fallback to mock data on error
@@ -100,8 +82,9 @@ export async function getUserProgress(userId: string): Promise<{
   };
 }> {
   try {
-    // In development, return mock data
-    if (process.env.NODE_ENV === 'development') {
+    // Always use mock data for isolated frontend implementation
+    // In production, this would connect to actual backend
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
       return getMockUserProgress(userId);
     }
 
@@ -134,27 +117,9 @@ export async function getUserProgress(userId: string): Promise<{
  */
 export async function getSkillAssessments(): Promise<SkillAssessmentData[]> {
   try {
-    // In development, return mock data
-    if (process.env.NODE_ENV === 'development') {
-      return getMockSkillAssessments();
-    }
-
-    const response = await fetch(`${API_BASE}/api/assessments/skills`, {
-      next: { 
-        revalidate: 7200, // 2 hour cache
-        tags: [CACHE_TAGS.SKILL_ASSESSMENTS] 
-      },
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch skill assessments: ${response.status}`);
-    }
-
-    const assessments = await response.json();
-    return assessments;
+    // Always use mock data for isolated frontend implementation
+    // In production, this would connect to actual backend
+    return getMockSkillAssessments();
   } catch (error) {
     console.error('Error fetching skill assessments:', error);
     // Fallback to mock data on error
@@ -168,30 +133,9 @@ export async function getSkillAssessments(): Promise<SkillAssessmentData[]> {
  */
 export async function getLearningPreferences(userId: string): Promise<LearningPreferences | null> {
   try {
-    // In development, return mock data
-    if (process.env.NODE_ENV === 'development') {
-      return getMockLearningPreferences(userId);
-    }
-
-    const response = await fetch(`${API_BASE}/api/users/${userId}/preferences`, {
-      next: { 
-        revalidate: 1800, // 30 minute cache
-        tags: [CACHE_TAGS.LEARNING_PREFERENCES, `user-${userId}`] 
-      },
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null; // User hasn't set preferences yet
-      }
-      throw new Error(`Failed to fetch learning preferences: ${response.status}`);
-    }
-
-    const preferences = await response.json();
-    return preferences;
+    // Always use mock data for isolated frontend implementation
+    // In production, this would connect to actual backend
+    return getMockLearningPreferences(userId);
   } catch (error) {
     console.error('Error fetching learning preferences:', error);
     // Return null for error case - preferences are optional
