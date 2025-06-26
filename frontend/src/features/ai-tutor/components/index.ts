@@ -36,6 +36,3 @@ export { InteractiveLessonComponent } from './learning/InteractiveLessonComponen
 // Dashboard components
 export { ProgressDashboardComponent } from './dashboard/ProgressDashboardComponent';
 export { LearningPreferencesComponent } from './dashboard/LearningPreferencesComponent';
-
-// Learning Store Demo (TASK-010)
-export { LearningStoreDemo } from './LearningStoreDemo';
