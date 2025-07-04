@@ -1,4 +1,4 @@
-# Intelligent Tutoring System (ITS) - Next.js Frontend
+# Intelligent Tutoring System (ITS)
 
 A modern, interactive tutoring system built with Next.js that delivers personalized and adaptive learning experiences. The application provides a chat-based interface for learning with AI-powered assessment and guidance capabilities.
 
@@ -14,7 +14,7 @@ A modern, interactive tutoring system built with Next.js that delivers personali
 
 ### Components
 
-1. **Next.js Frontend Application**
+1. **Next.js Application**
    - Modern React-based user interface
    - Server-side rendering and static site generation
    - API routes for backend functionality
@@ -36,33 +36,33 @@ A modern, interactive tutoring system built with Next.js that delivers personali
 
 The project is organized as a Next.js application with the following structure:
 
-- **`frontend/`**: Contains the Next.js application
-  - `public/`: Static assets and resources
-  - `src/`: Frontend source code
-    - `app/`: Next.js app directory with pages and layouts
-    - `components/`: Reusable React components
-    - `styles/`: CSS and styling files
-    - `utils/`: Utility functions and helpers
-    - `types/`: TypeScript type definitions
+- **`src/`**: Application source code
+  - `app/`: Next.js app directory with pages and layouts
+  - `components/`: Reusable React components
+  - `features/`: Feature-based components and logic
+  - `lib/`: Utility functions and helpers
+  - `validation/`: Input validation and schemas
+- **`public/`**: Static assets and resources
 - **`docs/`**: Project documentation
 
 A simplified view of the key directories:
 ```
 tutor_ai/
 ├── README.md
-├── frontend/
-│   ├── public/
-│   │   └── assets/              # Static assets
-│   ├── src/
-│   │   ├── app/                 # Next.js app directory
-│   │   │   ├── api/            # API routes
-│   │   │   ├── chat/           # Chat interface pages
-│   │   │   └── layout.tsx      # Root layout
-│   │   ├── components/         # React components
-│   │   │   ├── ui/            # UI components
-│   │   │   └── chat/          # Chat-specific components
-│   │   ├── styles/            # CSS and styling
-│   │   └── utils/             # Utility functions
+├── public/
+│   └── assets/              # Static assets
+├── src/
+│   ├── app/                 # Next.js app directory
+│   │   ├── api/            # API routes
+│   │   ├── ai-tutor/       # AI tutor interface pages
+│   │   └── layout.tsx      # Root layout
+│   ├── components/         # React components
+│   │   ├── ui/            # UI components
+│   │   └── shared/        # Shared components
+│   ├── features/          # Feature-based architecture
+│   │   └── ai-tutor/      # AI tutor feature
+│   ├── lib/               # Utility functions
+│   └── validation/        # Input validation
 ├── docs/
 │   └── ...
 └── package.json
@@ -73,7 +73,7 @@ tutor_ai/
 ### Completed Features
 
 1. **Next.js Application Setup**
-   - Modern React-based frontend
+   - Modern React-based application
    - TypeScript configuration
    - ESLint and Prettier setup
    - Responsive design system
@@ -157,23 +157,19 @@ tutor_ai/
 ## Getting Started
 
 1. Clone the repository
-2. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
-4. Start the development server:
+3. Start the development server:
    ```bash
    npm run dev
    ```
-5. Open your browser and navigate to `http://localhost:3000`
+4. Open your browser and navigate to `http://localhost:3000`
 
 ### Environment Configuration
 
-The application uses environment variables for configuration. Create a `.env.local` file in the frontend directory with the following variables:
+The application uses environment variables for configuration. Create a `.env.local` file in the root directory with the following variables:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000
