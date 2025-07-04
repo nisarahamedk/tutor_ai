@@ -1,7 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiClient } from '../lib/api';
+// TODO: Replace FastAPI apiClient with Next.js API routes
+// import { apiClient } from '../lib/api';
 
 // Common API response types
 interface ApiErrorResponse extends Error {
@@ -39,8 +40,9 @@ export async function sendChatMessageAction(
 
     const requestData: SendMessageRequest = validation.data!;
 
-    // Send message to FastAPI backend
-    const response = await apiClient.post<SendMessageResponse>('/chat/send', requestData);
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch('/api/chat/send', { method: 'POST', body: JSON.stringify(requestData) });
+    throw new Error('Chat API not implemented - replace FastAPI with Next.js API routes');
     
     // Validate response
     const validatedResponse = validateResponse(SendMessageResponseSchema, response);
@@ -96,7 +98,9 @@ export async function getChatHistoryAction(
   tabType: string
 ): Promise<{ messages: SendMessageResponse[]; success: boolean; error?: string }> {
   try {
-    const response = await apiClient.get<SendMessageResponse[]>(`/chat/history?tab=${tabType}`);
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch(`/api/chat/history?tab=${tabType}`);
+    throw new Error('Chat history API not implemented - replace FastAPI with Next.js API routes');
     
     // Validate each message in the response
     const validatedMessages = response.map(message => 
@@ -135,7 +139,9 @@ export async function clearChatHistoryAction(
       };
     }
 
-    await apiClient.delete(`/chat/history?tab=${tabType}`);
+    // TODO: Replace with Next.js API route call
+    // await fetch(`/api/chat/history?tab=${tabType}`, { method: 'DELETE' });
+    throw new Error('Clear chat history API not implemented - replace FastAPI with Next.js API routes');
 
     // Revalidate pages
     revalidatePath('/ai-tutor');
@@ -172,7 +178,9 @@ export async function exportChatHistoryAction(
       };
     }
 
-    const response = await apiClient.get<string>(`/chat/export?tab=${tabType}&format=${format}`);
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch(`/api/chat/export?tab=${tabType}&format=${format}`);
+    throw new Error('Export chat history API not implemented - replace FastAPI with Next.js API routes');
 
     return {
       success: true,

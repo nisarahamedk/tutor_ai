@@ -215,7 +215,7 @@ export const getLearningTracks = cache(async (filters?: {
     if (filters?.category) searchParams.set('category', filters.category);
     
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/learning/tracks?${searchParams}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/learning/tracks?${searchParams}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -253,7 +253,7 @@ export const getUserProgress = cache(async (userId?: string) => {
     }
 
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/users/${sessionUserId}/progress`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/users/${sessionUserId}/progress`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -280,7 +280,7 @@ export const getUserProgress = cache(async (userId?: string) => {
 export const getLearningTrackDetails = cache(async (trackId: string) => {
   try {
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/learning/tracks/${trackId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/learning/tracks/${trackId}`,
       {
         next: { 
           revalidate: 1800, // 30 minutes
@@ -799,7 +799,7 @@ global.fetch = jest.fn();
 describe('Server-side Queries', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.FASTAPI_URL = 'http://localhost:8000';
+    process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3000';
   });
 
   describe('getLearningTracks', () => {
@@ -817,7 +817,7 @@ describe('Server-side Queries', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/v1/learning/tracks?difficulty=Beginner&category=Frontend',
+        'http://localhost:3000/api/learning/tracks?difficulty=Beginner&category=Frontend',
         expect.objectContaining({
           headers: { 'Content-Type': 'application/json' },
           next: { revalidate: 3600, tags: ['learning-tracks'] }

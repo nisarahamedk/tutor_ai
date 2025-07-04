@@ -1,7 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiClient } from '../../../lib/api';
+// TODO: Replace FastAPI apiClient with Next.js API routes
+// import { apiClient } from '../../../lib/api';
 import type { MessageActionState, TabType, SendMessageRequest, SendMessageResponse } from './types';
 
 const VALID_TAB_TYPES: TabType[] = ['home', 'progress', 'review', 'explore'];
@@ -41,8 +42,9 @@ export async function sendMessageAction(
       timestamp: new Date().toISOString(),
     };
 
-    // Send message to FastAPI backend
-    const response = await apiClient.post<SendMessageResponse>('/chat/send', requestData);
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch('/api/chat/send', { method: 'POST', body: JSON.stringify(requestData) });
+    throw new Error('Send message API not implemented - replace FastAPI with Next.js API routes');
 
     // Revalidate the AI tutor page to update server components
     revalidatePath('/ai-tutor');

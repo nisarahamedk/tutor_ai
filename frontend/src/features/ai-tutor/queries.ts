@@ -2,8 +2,9 @@
 import type { LearningTrack } from './components/learning/TrackExplorationComponent';
 import type { SkillAssessment } from './components/learning/SkillAssessmentComponent';
 
-// Mock API base URL - in production this would be environment variable
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Mock API base URL - this project uses isolated frontend with mocked data
+// In production, this would be replaced with Next.js API routes
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // Cache tags for Next.js revalidation
 export const CACHE_TAGS = {
@@ -88,7 +89,8 @@ export async function getUserProgress(userId: string): Promise<{
       return getMockUserProgress(userId);
     }
 
-    const response = await fetch(`${API_BASE}/api/users/${userId}/progress`, {
+    // TODO: Replace with Next.js API route call
+    const response = await fetch(`/api/users/${userId}/progress`, {
       next: { 
         revalidate: 300, // 5 minute cache for progress data
         tags: [CACHE_TAGS.USER_PROGRESS, `user-${userId}`] 

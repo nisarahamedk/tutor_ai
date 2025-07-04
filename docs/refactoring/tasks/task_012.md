@@ -164,7 +164,7 @@ export async function sendChatMessage(
     }
 
     // Call FastAPI backend
-    const response = await fetch(`${process.env.FASTAPI_URL}/api/v1/chat/send`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ export async function retryChatMessage(
     }
 
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/chat/retry/${messageId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/retry/${messageId}`,
       {
         method: 'POST',
         headers: {
@@ -324,7 +324,7 @@ export async function updateLearningProgress(
     const { trackId, lessonId, progress, timeSpent, notes } = validationResult.data;
 
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/learning/tracks/${trackId}/lessons/${lessonId}/progress`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/learning/tracks/${trackId}/lessons/${lessonId}/progress`,
       {
         method: 'PUT',
         headers: {
@@ -381,7 +381,7 @@ export async function completeLesson(
     }
 
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/learning/tracks/${trackId}/lessons/${lessonId}/complete`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/learning/tracks/${trackId}/lessons/${lessonId}/complete`,
       {
         method: 'POST',
         headers: {
@@ -470,7 +470,7 @@ export async function submitSkillAssessment(
     const { trackId, answers, totalTime } = validationResult.data;
 
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/assessments/submit`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/assessments/submit`,
       {
         method: 'POST',
         headers: {
@@ -528,7 +528,7 @@ export async function saveAssessmentProgress(
     }
 
     await fetch(
-      `${process.env.FASTAPI_URL}/api/v1/assessments/${assessmentId}/progress`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/assessments/${assessmentId}/progress`,
       {
         method: 'PUT',
         headers: {
@@ -796,7 +796,7 @@ describe('ChatMessageForm with Server Actions', () => {
 - `src/features/ai-tutor/components/ProgressDashboardComponent.tsx`
 
 ### Environment Configuration
-- `.env.local` (add FASTAPI_URL)
+- `.env.local` (add NEXT_PUBLIC_API_URL)
 - `next.config.ts` (if needed for API configuration)
 
 ## Dependencies

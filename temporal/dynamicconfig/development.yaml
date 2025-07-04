@@ -1,9 +1,0 @@
-frontend.enableClientVersionCheck:
-  - value: false
-    constraints: {}
-system.enableReadFromES:
-  - value: false
-    constraints: {}
-history.enableReadFromSecondary:
-  - value: false
-    constraints: {}

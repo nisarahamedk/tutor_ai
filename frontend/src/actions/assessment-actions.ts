@@ -1,7 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiClient } from '../lib/api';
+// TODO: Replace FastAPI apiClient with Next.js API routes
+// import { apiClient } from '../lib/api';
 
 // Common API response types
 interface ApiErrorResponse extends Error {
@@ -50,7 +51,9 @@ export async function getAssessmentAction(
       passingScore: number;
       maxRetries: number;
     }
-    const response = await apiClient.get(`/assessments/${assessmentId}`) as AssessmentResponse;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch(`/api/assessments/${assessmentId}`);
+    throw new Error('Assessment API not implemented - replace FastAPI with Next.js API routes');
     
     // Validate questions in the response
     const validatedQuestions = response.questions.map((question: unknown) => 
@@ -110,11 +113,9 @@ export async function submitAssessmentAction(
 
     const submissionData: AssessmentSubmission = validation.data!;
 
-    // Submit assessment to FastAPI backend
-    const response = await apiClient.post<AssessmentResult>(
-      '/assessments/submit',
-      submissionData
-    );
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch('/api/assessments/submit', { method: 'POST', body: JSON.stringify(submissionData) });
+    throw new Error('Assessment submission API not implemented - replace FastAPI with Next.js API routes');
     
     // Validate response
     const validatedResponse = validateResponse(AssessmentResultSchema, response);
@@ -194,7 +195,9 @@ export async function getAssessmentResultsAction(
       ? `/assessments/results/${assessmentId}` 
       : '/assessments/results';
     
-    const response = await apiClient.get(url) as BasicApiResponse;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch(url);
+    throw new Error('Assessment results API not implemented - replace FastAPI with Next.js API routes');
 
     // Validate results
     const validatedResults = Array.isArray(response) 
@@ -245,9 +248,9 @@ export async function startAssessmentAction(
       };
     }
 
-    const response = await apiClient.post(`/assessments/${assessmentId}/start`, {
-      startTime: new Date().toISOString(),
-    }) as BasicApiResponse;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch(`/api/assessments/${assessmentId}/start`, { method: 'POST', body: JSON.stringify({ startTime: new Date().toISOString() }) });
+    throw new Error('Start assessment API not implemented - replace FastAPI with Next.js API routes');
 
     return {
       success: true,
@@ -301,19 +304,9 @@ export async function getAvailableAssessmentsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const response = await apiClient.get('/assessments/available') as Array<{
-      id: string;
-      title: string;
-      description: string;
-      difficulty: string;
-      estimatedTime: number;
-      prerequisites: string[];
-      isCompleted: boolean;
-      bestScore?: number;
-      attemptsUsed: number;
-      maxAttempts: number;
-      trackId?: string;
-    }>;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch('/api/assessments/available');
+    throw new Error('Available assessments API not implemented - replace FastAPI with Next.js API routes');
 
     return {
       success: true,
@@ -346,12 +339,9 @@ export async function generatePersonalizedAssessmentAction(
     const difficulty = formData.get('difficulty')?.toString();
     const focusAreas = formData.getAll('focusAreas[]').map(area => area.toString());
     
-    const response = await apiClient.post('/assessments/generate', {
-      trackId,
-      difficulty,
-      focusAreas,
-      generatedAt: new Date().toISOString(),
-    }) as BasicApiResponse;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch('/api/assessments/generate', { method: 'POST', body: JSON.stringify({ trackId, difficulty, focusAreas, generatedAt: new Date().toISOString() }) });
+    throw new Error('Generate assessment API not implemented - replace FastAPI with Next.js API routes');
 
     return {
       success: true,
@@ -384,15 +374,9 @@ export async function getSkillProficiencyAction(): Promise<{
   error?: string;
 }> {
   try {
-    const response = await apiClient.get('/assessments/proficiency') as Array<{
-      skill: string;
-      level: string;
-      score: number;
-      assessments: number;
-      lastAssessed: string;
-      trend: 'improving' | 'stable' | 'declining';
-      recommendations: string[];
-    }>;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch('/api/assessments/proficiency');
+    throw new Error('Skill proficiency API not implemented - replace FastAPI with Next.js API routes');
 
     return {
       success: true,
@@ -431,7 +415,9 @@ export async function retakeAssessmentAction(
       };
     }
 
-    const response = await apiClient.post(`/assessments/${assessmentId}/retake`, {}) as BasicApiResponse;
+    // TODO: Replace with Next.js API route call
+    // const response = await fetch(`/api/assessments/${assessmentId}/retake`, { method: 'POST' });
+    throw new Error('Retake assessment API not implemented - replace FastAPI with Next.js API routes');
 
     // Revalidate assessment page
     revalidatePath(`/ai-tutor/assessment/${assessmentId}`);

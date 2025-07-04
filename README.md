@@ -1,157 +1,124 @@
-# Intelligent Tutoring System (ITS) with AI Agents
+# Intelligent Tutoring System (ITS) - Next.js Frontend
 
-An AI-driven tutoring system that delivers personalized and adaptive learning experiences. It leverages AI agents for assessment, guidance, and support, orchestrated through robust workflows to cater to individual learning needs.
+A modern, interactive tutoring system built with Next.js that delivers personalized and adaptive learning experiences. The application provides a chat-based interface for learning with AI-powered assessment and guidance capabilities.
 
 ## Project Goals
 
 1. Create an intelligent tutoring system that adapts to individual learning needs
 2. Provide real-time, interactive learning experiences through chat
 3. Use AI agents to assess, guide, and support learners
-4. Implement robust workflow orchestration for complex learning paths
-5. Build a scalable and maintainable architecture
+4. Build a scalable and maintainable Next.js application
+5. Deliver a responsive and accessible user interface
 
 ## Current Architecture
 
 ### Components
 
-1. **API Layer (FastAPI)**
-   - Real-time WebSocket communication for chat
-   - RESTful endpoints for system interactions
-   - CORS and iframe support enabled
-   - Running on configurable port (default: 54321)
-   - Handles WebSocket connections for chat functionality
+1. **Next.js Frontend Application**
+   - Modern React-based user interface
+   - Server-side rendering and static site generation
+   - API routes for backend functionality
+   - Real-time chat interface
+   - Responsive design with mobile support
 
-2. **Frontend**
-   - Simple chat interface
+2. **Chat Interface**
    - Real-time message updates
    - Support for structured responses
-   - Served on configurable port (default: 54322)
+   - Interactive learning experience
+   - Message history and session management
 
-3. **Workflow Orchestration (Temporal.io)**
-   - Learning session management
-   - Multi-step assessment processes
-   - Long-running workflow support
-
-4. **AI Agents**
-   - PreAssessmentAgent for initial learner evaluation
-   - (Planned) More specialized agents for different learning aspects
+3. **AI Integration**
+   - Client-side AI agent interactions
+   - Assessment and guidance capabilities
+   - Adaptive learning algorithms
 
 ## Project Structure
 
-The project is now organized into two main directories: `frontend` and `backend`.
+The project is organized as a Next.js application with the following structure:
 
-- **`frontend/`**: Contains the Next.js user interface for the chat application. (Future setup)
-  - `public/`: Static assets, including the initial simple HTML/CSS chat interface.
-  - `src/`: Frontend source code (e.g., React components, styles).
-- **`backend/`**: Contains the FastAPI application, AI agents, and related logic.
-  - `app/`: Core application code.
-    - `api/`: API endpoints.
-    - `agents/`: AI agent implementations.
-    - `core/`: Core utilities like CORS configuration and the static server for the simple chat interface.
-    - `services/`: Business logic services.
-    - `db/`: Database interaction layer (planned).
-    - `temporal/`: Temporal workflow definitions (planned).
-  - `tests/`: Backend tests.
-  - `Dockerfile`: Docker configuration for the backend.
-  - `pyproject.toml`, `poetry.lock`: Python dependency management.
-- **`docs/`**: Project documentation.
-- **`docker-compose.yml`**: Orchestrates the backend and other services.
-- **`temporal/`**: Temporal.io server configuration (can be moved into backend or kept separate based on deployment).
-
+- **`frontend/`**: Contains the Next.js application
+  - `public/`: Static assets and resources
+  - `src/`: Frontend source code
+    - `app/`: Next.js app directory with pages and layouts
+    - `components/`: Reusable React components
+    - `styles/`: CSS and styling files
+    - `utils/`: Utility functions and helpers
+    - `types/`: TypeScript type definitions
+- **`docs/`**: Project documentation
 
 A simplified view of the key directories:
 ```
 tutor_ai/
 ├── README.md
-├── backend/
-│   ├── app/
-│   │   ├── agents/
-│   │   ├── api/
-│   │   │   └── v1/
-│   │   │       └── endpoints/
-│   │   │           └── chat.py   # Main API logic previously in api/main.py
-│   │   ├── core/
-│   │   │   ├── cors_config.py
-│   │   │   └── static_server.py # Serves the simple chat UI
-│   │   └── main.py             # FastAPI app entry point
-│   ├── Dockerfile
-│   ├── poetry.lock
-│   ├── pyproject.toml
-│   └── tests/
-│       └── unit/
-│           └── agents/
-├── docs/
-│   ├── architecture.md
-│   └── ...
 ├── frontend/
 │   ├── public/
-│   │   └── templates/            # Simple HTML/CSS chat interface
-│   │       ├── css/
-│   │       │   └── style.css
-│   │       └── index.html
-│   └── src/                    # For Next.js app (future)
-├── docker-compose.yml
-├── temporal/                   # Temporal server config
-└── ...
+│   │   └── assets/              # Static assets
+│   ├── src/
+│   │   ├── app/                 # Next.js app directory
+│   │   │   ├── api/            # API routes
+│   │   │   ├── chat/           # Chat interface pages
+│   │   │   └── layout.tsx      # Root layout
+│   │   ├── components/         # React components
+│   │   │   ├── ui/            # UI components
+│   │   │   └── chat/          # Chat-specific components
+│   │   ├── styles/            # CSS and styling
+│   │   └── utils/             # Utility functions
+├── docs/
+│   └── ...
+└── package.json
 ```
 
 ## Current Implementation
 
 ### Completed Features
 
-1. **Basic Chat Infrastructure**
-   - WebSocket-based real-time communication
-   - Message handling and display
-   - Basic error handling and logging
+1. **Next.js Application Setup**
+   - Modern React-based frontend
+   - TypeScript configuration
+   - ESLint and Prettier setup
+   - Responsive design system
 
-2. **Initial Assessment Flow**
-   - User input processing
-   - Preliminary assessment questions generation
-   - Structured response handling
+2. **Chat Interface**
+   - Interactive chat components
+   - Message handling and display
+   - Real-time user interactions
+   - Session management
 
 3. **Development Environment**
-   - Local development server setup
-   - CORS and security configurations
-   - Basic logging system
+   - Local development server
+   - Hot module replacement
+   - Development and production builds
+   - Environment configuration
 
 ### Current Workflow
 
-1. User connects to the chat interface
-2. User expresses learning interest (e.g., "I want to learn Python")
-3. System triggers assessment workflow
-4. PreAssessmentAgent generates relevant questions
-5. Questions are presented to user in chat interface
+1. User accesses the Next.js application
+2. User interacts with the chat interface
+3. User expresses learning interest (e.g., "I want to learn Python")
+4. System provides assessment and guidance
+5. Interactive learning session continues
 
 ## TODO List
 
 ### Short-term
 
-1. **Temporal Integration**
-   - [x] Set up Temporal server
-   - [x] Implement proper workflow client
-   - [ ] Add error handling and retries
-   - [ ] Configure port forwarding for Temporal UI (8233)
-
-2. **AI Agent Enhancement**
-   - [ ] Integrate with actual LLM service
-   - [ ] Add more sophisticated question generation
-   - [ ] Implement response analysis
-
-3. **User Experience**
-   - [x] Improve chat interface design
-     - [x] Move CSS to separate file
-     - [x] Implement responsive layout
+1. **Enhanced UI/UX**
+   - [ ] Improve chat interface design
    - [ ] Add typing indicators
    - [ ] Implement message history
+   - [ ] Add loading states and animations
 
-4. **Development Infrastructure**
-   - [x] Implement environment-based configuration
-   - [x] Set up template system for frontend
-   - [ ] Add development documentation
-   - [x] Set up automated testing
-     - [x] Integration tests for API layer
-     - [x] WebSocket chat flow testing
-     - [ ] Unit tests for agents
+2. **AI Integration**
+   - [ ] Integrate with LLM services
+   - [ ] Add sophisticated question generation
+   - [ ] Implement response analysis
+   - [ ] Create assessment workflows
+
+3. **User Experience**
+   - [ ] Add user authentication
+   - [ ] Implement session persistence
+   - [ ] Create user profile management
+   - [ ] Add progress tracking
 
 ### Medium-term
 
@@ -159,16 +126,19 @@ tutor_ai/
    - [ ] Create learning path generation
    - [ ] Implement progress tracking
    - [ ] Add assessment scoring
+   - [ ] Build curriculum management
 
-2. **System Architecture**
-   - [ ] Add user authentication
-   - [ ] Implement session management
-   - [ ] Set up database for user data
+2. **Advanced Features**
+   - [ ] Add multimedia support
+   - [ ] Implement collaborative learning
+   - [ ] Create content management system
+   - [ ] Add offline capabilities
 
-3. **AI Capabilities**
-   - [ ] Add specialized subject matter agents
-   - [ ] Implement adaptive learning algorithms
-   - [ ] Create content recommendation system
+3. **Performance and Optimization**
+   - [ ] Implement caching strategies
+   - [ ] Optimize bundle size
+   - [ ] Add performance monitoring
+   - [ ] Implement lazy loading
 
 ### Long-term
 
@@ -176,115 +146,88 @@ tutor_ai/
    - [ ] Add support for multiple learning formats
    - [ ] Implement collaborative learning features
    - [ ] Create content management system
+   - [ ] Add mobile app support
 
 2. **Analytics and Monitoring**
    - [ ] Add learning analytics
    - [ ] Implement performance monitoring
    - [ ] Create reporting system
+   - [ ] Add user behavior tracking
 
 ## Getting Started
 
-1. Clone the repository.
-2. Navigate to the `backend` directory if you need to run backend-specific commands: `cd backend`
-3. To start all services (including the backend API and the simple frontend server), run from the project root:
+1. Clone the repository
+2. Navigate to the frontend directory:
    ```bash
-   docker-compose up --build
+   cd frontend
    ```
-   - The backend API will be available at `http://localhost:54321`.
-   - The simple chat interface (served by the `static` service) will be available at `http://localhost:54322`.
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+5. Open your browser and navigate to `http://localhost:3000`
 
 ### Environment Configuration
 
-The backend application uses environment variables for configuration. These can be set in a `.env` file located in the `backend/` directory (e.g., `backend/.env`). Example variables:
+The application uses environment variables for configuration. Create a `.env.local` file in the frontend directory with the following variables:
 
-- `API_PORT`: Port for the main API server (default: 54321)
-- `STATIC_PORT`: Port for the static file server (default: 54322)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_APP_NAME=Intelligent Tutoring System
+```
 
-You can customize these values by editing the `.env` file.
+### Available Scripts
 
-### Running Tests (Backend)
-
-The backend project uses pytest for testing. To run the tests:
-
-1. Ensure you are in the `backend` directory: `cd backend`
-2. Make sure any dependencies like a running database or other services are available if your tests require them. (The current tests might require the API server to be running for integration tests, though this is often handled by test fixtures).
-3. Run the tests using Poetry:
-   ```bash
-   poetry run pytest tests/
-   ```
-   (The `tests/` path is relative to the `backend` directory).
-
-The test suite includes:
-- Integration tests for the API layer (`backend/tests/integration/`)
-- Unit tests for agents (`backend/tests/unit/agents/`)
-- WebSocket chat flow testing
-- Health check endpoint testing
+- `npm run dev` - Start the development server
+- `npm run build` - Build the application for production
+- `npm run start` - Start the production server
+- `npm run lint` - Run ESLint for code linting
+- `npm run type-check` - Run TypeScript type checking
 
 ## Development Notes
 
-- The system is designed to be modular and extensible
-- Each component (API, agents, workflows) is isolated for easier maintenance
-- Logging is implemented for debugging and monitoring
-- CORS is configured to allow cross-origin requests
-- WebSocket connections handle real-time chat functionality
+- The application is built with Next.js 14+ using the App Router
+- TypeScript is used throughout for type safety
+- Components are organized in a modular structure
+- Responsive design principles are followed
+- Modern React patterns and hooks are utilized
 
 ## Contributing
 
 When contributing to this project:
-1. Follow the existing code structure
-2. Add appropriate logging
-3. Update this README when adding new features
-4. Ensure all endpoints have proper error handling
-5. Test WebSocket connections thoroughly
+1. Follow the existing code structure and patterns
+2. Use TypeScript for all new code
+3. Follow the established linting and formatting rules
+4. Update this README when adding new features
+5. Ensure all components are properly typed and documented
+6. Test thoroughly across different screen sizes and devices
 
-## Development Status (Last Updated: March 9, 2024)
+## Development Status
 
 ### Current State
-1. Basic infrastructure is set up:
-   - FastAPI backend with WebSocket support
-   - Simple frontend chat interface
-   - Initial test suite for API integration tests
-   - LLMService class ready for integration
-
-2. Testing Infrastructure:
-   - Integration tests for API layer and WebSocket communication
-   - Unit tests for PreAssessmentAgent
-   - Test coverage for error handling and edge cases
-
-3. Dependencies:
-   - Added smolagents (v1.10.0) for LLM integration
-   - Ollama installed locally with mistral model
-   - All required Python packages in pyproject.toml
+1. Next.js application infrastructure is set up
+2. Basic chat interface components are implemented
+3. Development environment is configured
+4. Project structure is organized and documented
 
 ### Immediate Next Steps
-1. **LLM Integration (In Progress)**
-   - Fix CodeAgent prompt templates to match smolagents format
-   - Update tests to handle the new prompt template structure
-   - Test the integration with Ollama
-   - Key files to work on:
-     - `backend/app/agents/llm_service.py`
-     - `backend/tests/unit/agents/test_llm_service.py`
+1. **Enhanced Chat Experience**
+   - Improve chat interface design and interactions
+   - Add real-time features and animations
+   - Implement proper state management
 
-2. Future Work:
-   - Set up Temporal workflows
-   - Improve the chat interface
-   - Add user session management
+2. **AI Integration**
+   - Connect with AI services for intelligent tutoring
+   - Implement assessment and guidance workflows
+   - Add personalized learning features
 
-### How to Continue Development
-1. The LLMService class is ready for Ollama integration:
-   ```python
-   from smolagents import Agent, Message, Role
-   from smolagents.llms import Ollama
-   ```
-
-2. Key components to implement:
-   - Enhanced question generation using LLM
-   - Dynamic context handling
-   - Improved error handling and fallback mechanisms
-
-3. Testing Strategy:
-   - Run tests: `poetry run pytest tests/ -v`
-   - Ensure all existing tests pass before adding new features
-   - Follow TDD approach for new functionality
+3. **User Management**
+   - Add authentication and user profiles
+   - Implement session management
+   - Create progress tracking features
 
 This README will be updated as the project evolves.

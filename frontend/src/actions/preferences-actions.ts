@@ -79,7 +79,7 @@ export async function updateUserPreferencesAction(
 
     const preferencesData: UpdatePreferences = validation.data!;
 
-    // Send preferences update to FastAPI backend
+    // Send preferences update to Next.js API routes
     const response = await apiClient.put<UpdatePreferencesResponse>(
       '/user/preferences',
       preferencesData

@@ -419,7 +419,7 @@ export async function sendMessageAction(
     const input = validateFormData(SendMessageRequestSchema, formData);
     
     // Call FastAPI backend
-    const response = await fetch(`${process.env.FASTAPI_URL}/api/v1/chat/message`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -462,7 +462,7 @@ export async function enrollInTrackAction(
   try {
     const input = validateFormData(EnrollTrackRequestSchema, formData);
     
-    const response = await fetch(`${process.env.FASTAPI_URL}/api/v1/learning/enroll`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/learning/enroll`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -496,7 +496,7 @@ export async function updateProgressAction(
   try {
     const input = validateFormData(UpdateProgressRequestSchema, formData);
     
-    const response = await fetch(`${process.env.FASTAPI_URL}/api/v1/learning/progress`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/learning/progress`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

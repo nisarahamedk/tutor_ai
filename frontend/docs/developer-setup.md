@@ -68,7 +68,7 @@ Configure the following environment variables in `.env.local`:
 
 ```bash
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:3000
 API_SECRET_KEY=your-secret-key
 
 # Database (if applicable)

@@ -113,7 +113,7 @@ export async function enrollInTrackAction(
 
     const enrollmentData: TrackEnrollment = validation.data!;
 
-    // Send enrollment request to FastAPI backend
+    // Send enrollment request to Next.js API routes
     const response = await apiClient.post<TrackEnrollmentResponse>(
       '/learning/enroll',
       enrollmentData

@@ -40,7 +40,7 @@ export async function updateProgressAction(
 
     const progressData: ProgressUpdate = validation.data!;
 
-    // Send progress update to FastAPI backend
+    // Send progress update to Next.js API routes
     const response = await apiClient.post<ProgressResponse>(
       '/learning/progress',
       progressData

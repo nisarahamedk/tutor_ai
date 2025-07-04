@@ -153,7 +153,7 @@ export async function sendMessageAction(
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // In real implementation, call FastAPI
-    const response = await fetch(`${process.env.FASTAPI_URL}/chat/send`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, tab, contextId })
@@ -228,7 +228,7 @@ export async function updateProgressAction(
 
     // Update progress via API
     const response = await fetch(
-      `${process.env.FASTAPI_URL}/learning/progress`,
+      `${process.env.NEXT_PUBLIC_API_URL}/learning/progress`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

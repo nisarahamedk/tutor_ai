@@ -3,17 +3,13 @@
     "playwright": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "@playwright/mcp@latest"
-      ],
+      "args": ["@playwright/mcp@latest"],
       "env": {}
     },
     "taskmaster": {
       "type": "stdio",
       "command": "node",
-      "args": [
-        "/mcps/claude-task-master/mcp-server/server.js"
-      ],
+      "args": ["/mcps/claude-task-master/mcp-server/server.js"],
       "env": {}
     }
   }
