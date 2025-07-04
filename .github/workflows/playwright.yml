@@ -1,0 +1,68 @@
+name: Frontend CI Checks
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: 'npm' # Added caching for npm dependencies
+        cache-dependency-path: frontend/package-lock.json # Path to package-lock
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Vitest unit tests (with coverage)
+      run: npm run coverage # This script runs 'vitest run --coverage'
+
+    - name: Upload Vitest coverage report
+      uses: actions/upload-artifact@v4
+      if: always() # Upload even if previous steps fail, to see the report
+      with:
+        name: vitest-coverage-report
+        path: frontend/coverage/
+        retention-days: 30
+
+    - name: Install Playwright Browsers
+      # Run from repo root as npx playwright looks for local installation
+      # or ensure playwright is found globally or via npx from the working-directory
+      run: npx playwright install --with-deps
+      working-directory: . # Explicitly run from repo root for this global tool install step
+
+    - name: Run Playwright E2E tests
+      run: npm run test:e2e
+
+    - name: Upload Playwright E2E report
+      uses: actions/upload-artifact@v4
+      if: always() # Upload even if previous steps fail
+      with:
+        name: playwright-e2e-report
+        path: frontend/playwright-report/
+        retention-days: 30
+
+    - name: Run Playwright Component Tests
+      run: npm run test:ct
+
+    - name: Upload Playwright Component Test report
+      uses: actions/upload-artifact@v4
+      if: always() # Upload even if previous steps fail
+      with:
+        name: playwright-ct-report
+        # Assuming component tests output to 'frontend/playwright-ct-report/'
+        # This might need adjustment based on actual playwright-ct.config.ts reporter path
+        path: frontend/playwright-ct-report/
+        retention-days: 30
